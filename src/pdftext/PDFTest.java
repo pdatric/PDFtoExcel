@@ -38,6 +38,7 @@ import org.apache.poi.ss.usermodel.Row;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import org.apache.poi.hssf.util.CellRangeAddress;
+import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.util.CellUtil;
 
 /**
@@ -183,10 +184,11 @@ public static void getData(int size, String templatePath) throws FileNotFoundExc
             list.add(analyte);
             Ion.add(record.get(0));
         }
-        if(a.contains("Be") && a.length() <= 3){
-            Be = record.get(3);
-            list.add(Be);
-            Ion.add(record.get(0));
+        
+        if(a.contains("Be") && a.length() <= 3){ //if the Ion is what I'm looking for
+            Be = record.get(3);                  //and its only 2 chars long
+            list.add(Be);                        //add the resulting conc to list 
+            Ion.add(record.get(0));              //add the ion name to Ion
         }
                 
         if( a.contains("Na") && a.length() <= 3) {
@@ -316,355 +318,277 @@ public static void getData(int size, String templatePath) throws FileNotFoundExc
 }  
 //public static void excelTemplate(List list, List Ion, String material, String lotNum, int size) throws IOException{
 public static void excelTemplate(List selectedFiles, int size){   
+    
     System.out.println("***********************");
     System.out.println("Creating Excel Template");
     System.out.println("***********************");
-
-    DateFormat dateFormat = new SimpleDateFormat("_yyyy_MM_dd_HH:mm:ss");
-    Date date = new Date();
+    
     String templatePath = null; 
     try { 
-        File template = new File("C:\\PDFTester\\_Ions.xls");
+        File template = new File("C:\\PDFTester\\_Ions.xls"); //creates the template file
         template.createNewFile();
         try (FileOutputStream ions = new FileOutputStream(template, false)) {
             HSSFWorkbook workbook = new HSSFWorkbook();
             HSSFSheet worksheet = workbook.createSheet("Ions");
-
+            
+            Font fontBold = workbook.createFont();
+            fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
+            Font fontRed = workbook.createFont();
+            fontRed.setColor(HSSFColor.RED.index);
+            
+            HSSFCellStyle cellStyle = workbook.createCellStyle();
+            
             System.out.println("Populating common fields..... ");
             
             System.out.println(selectedFileSize);
-            
-            HSSFRow name = worksheet.createRow((short) 0);
+            /* rest of this method creates each row, then creates the first cell 
+               of the column and fills it with the ions template */
+        HSSFRow name = worksheet.createRow((short) 0);
             HSSFCell cellA1 = name.createCell((short) 0);
             cellA1.setCellValue("Name: ");
-            HSSFCellStyle cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.GOLD.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
             
             
-            HSSFRow lot = worksheet.createRow((short) 1);
+        HSSFRow lot = worksheet.createRow((short) 1);
             HSSFCell cellA2 = lot.createCell((short) 0);
             cellA2.setCellValue("Lot #: ");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.GOLD.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-           
             
-            HSSFRow stage = worksheet.createRow((short) 2);
+            
+
+        HSSFRow stage = worksheet.createRow((short) 2);
             HSSFCell cellA3 = stage.createCell((short) 0);
             cellA3.setCellValue("Stage: ");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.GOLD.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
             
             
-            HSSFRow conc = worksheet.createRow((short) 3);
+            
+        HSSFRow conc = worksheet.createRow((short) 3);
             HSSFCell cellA4 = conc.createCell((short) 0);
             cellA4.setCellValue("Analyte");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Be = worksheet.createRow((short) 4);
+            
+        HSSFRow Be = worksheet.createRow((short) 4);
             HSSFCell cellA5= Be.createCell((short) 0);
             cellA5.setCellValue("Be");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Na = worksheet.createRow((short) 5);
+            
+        HSSFRow Na = worksheet.createRow((short) 5);
             HSSFCell cellA6= Na.createCell((short) 0);
             cellA6.setCellValue("Na");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Mg = worksheet.createRow((short) 6);
+            
+        HSSFRow Mg = worksheet.createRow((short) 6);
             HSSFCell cellA7= Mg.createCell((short) 0);
             cellA7.setCellValue("Mg");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Al = worksheet.createRow((short) 7);
+        HSSFRow Al = worksheet.createRow((short) 7);
             HSSFCell cellA8= Al.createCell((short) 0);
             cellA8.setCellValue("Al");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow K = worksheet.createRow((short) 8);
+        HSSFRow K = worksheet.createRow((short) 8);
             HSSFCell cellA9= K.createCell((short) 0);
             cellA9.setCellValue("K");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Ca = worksheet.createRow((short) 9);
+        HSSFRow Ca = worksheet.createRow((short) 9);
             HSSFCell cellA10= Ca.createCell((short) 0);
             cellA10.setCellValue("Ca");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Ti = worksheet.createRow((short) 10);
+        HSSFRow Ti = worksheet.createRow((short) 10);
             HSSFCell cellA11= Ti.createCell((short) 0);
             cellA11.setCellValue("Ti");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Cr = worksheet.createRow((short) 11);
+        HSSFRow Cr = worksheet.createRow((short) 11);
             HSSFCell cellA12= Cr.createCell((short) 0);
             cellA12.setCellValue("Cr");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Mn = worksheet.createRow((short) 12);
+        HSSFRow Mn = worksheet.createRow((short) 12);
             HSSFCell cellA13= Mn.createCell((short) 0);
             cellA13.setCellValue("Mn");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Fe = worksheet.createRow((short) 13);
+        HSSFRow Fe = worksheet.createRow((short) 13);
             HSSFCell cellA14= Fe.createCell((short) 0);
             cellA14.setCellValue("Fe");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Ni = worksheet.createRow((short) 15);
+        HSSFRow Ni = worksheet.createRow((short) 15);
             HSSFCell cellA16= Ni.createCell((short) 0);
             cellA16.setCellValue("Ni");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Co = worksheet.createRow((short) 14);
+        HSSFRow Co = worksheet.createRow((short) 14);
             HSSFCell cellA15= Co.createCell((short) 0);
             cellA15.setCellValue("Co");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Cu = worksheet.createRow((short) 16);
+        HSSFRow Cu = worksheet.createRow((short) 16);
             HSSFCell cellA17= Cu.createCell((short) 0);
             cellA17.setCellValue("Cu");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Ga = worksheet.createRow((short) 17);
+        HSSFRow Ga = worksheet.createRow((short) 17);
             HSSFCell cellA18= Ga.createCell((short) 0);
             cellA18.setCellValue("Ga");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Zr = worksheet.createRow((short) 18);
+        HSSFRow Zr = worksheet.createRow((short) 18);
             HSSFCell cellA19= Zr.createCell((short) 0);
             cellA19.setCellValue("Zr");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Mo = worksheet.createRow((short) 19);
+        HSSFRow Mo = worksheet.createRow((short) 19);
             HSSFCell cellA20= Mo.createCell((short) 0);
             cellA20.setCellValue("Mo");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Ru = worksheet.createRow((short) 20);
+        HSSFRow Ru = worksheet.createRow((short) 20);
             HSSFCell cellA21= Ru.createCell((short) 0);
             cellA21.setCellValue("Ru");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Cd = worksheet.createRow((short) 21);
+        HSSFRow Cd = worksheet.createRow((short) 21);
             HSSFCell cellA22= Cd.createCell((short) 0);
             cellA22.setCellValue("Cd");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow In = worksheet.createRow((short) 22);
+        HSSFRow In = worksheet.createRow((short) 22);
             HSSFCell cellA23= In.createCell((short) 0);
             cellA23.setCellValue("In");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Sn = worksheet.createRow((short) 23);
+        HSSFRow Sn = worksheet.createRow((short) 23);
             HSSFCell cellA24= Sn.createCell((short) 0);
             cellA24.setCellValue("Sn");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Li = worksheet.createRow((short) 24);
+        HSSFRow Li = worksheet.createRow((short) 24);
             HSSFCell cellA25= Li.createCell((short) 0);
             cellA25.setCellValue("Li");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Zn = worksheet.createRow((short) 25);
+        HSSFRow Zn = worksheet.createRow((short) 25);
             HSSFCell cellA26= Zn.createCell((short) 0);
             cellA26.setCellValue("Zn");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Sb = worksheet.createRow((short) 26);
+        HSSFRow Sb = worksheet.createRow((short) 26);
             HSSFCell cellA27= Sb.createCell((short) 0);
             cellA27.setCellValue("Sb");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow W = worksheet.createRow((short) 27);
+        HSSFRow W = worksheet.createRow((short) 27);
             HSSFCell cellA28= W.createCell((short) 0);
             cellA28.setCellValue("W");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow Pb = worksheet.createRow((short) 28);
+        HSSFRow Pb = worksheet.createRow((short) 28);
             HSSFCell cellA29= Pb.createCell((short) 0);
             cellA29.setCellValue("Pb");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow tot = worksheet.createRow((short) 29);
+        HSSFRow tot = worksheet.createRow((short) 29);
             HSSFCell cellA30= tot.createCell((short) 0);
             cellA30.setCellValue("Total: ");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            //cellStyle.setFont(fontBold);
             
-            HSSFRow row30 = worksheet.createRow((short) 30);
+        HSSFRow row30 = worksheet.createRow((short) 30);
             HSSFCell cellA31= tot.createCell((short) 0);
             
-            HSSFRow row31 = worksheet.createRow((short) 31);
+        HSSFRow row31 = worksheet.createRow((short) 31);
             HSSFCell cellA32= tot.createCell((short) 0);
             
-            HSSFRow critHeader = worksheet.createRow((short) 32);
+        HSSFRow critHeader = worksheet.createRow((short) 32);
             HSSFCell cellA33= critHeader.createCell((short) 0);
             cellA33.setCellValue("10 Critical Ions");
             worksheet.addMergedRegion(new CellRangeAddress(32,32,0,size));
             CellUtil.setAlignment(cellA33,workbook, cellStyle.ALIGN_CENTER);
-            cellStyle = workbook.createCellStyle();
+            cellStyle.setFont(fontBold);
             cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
             
-            HSSFRow critLot = worksheet.createRow((short) 33);
+            
+        HSSFRow critLot = worksheet.createRow((short) 33);
             HSSFCell cellA34= critLot.createCell((short) 0);
             cellA34.setCellValue("Lot: ");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critConc = worksheet.createRow((short) 34);
+        HSSFRow critConc = worksheet.createRow((short) 34);
             HSSFCell cellA35= critConc.createCell((short) 0);
             cellA35.setCellValue("Analyte");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critNa = worksheet.createRow((short) 35);
+        HSSFRow critNa = worksheet.createRow((short) 35);
             HSSFCell cellA36= critNa.createCell((short) 0);
             cellA36.setCellValue("Na");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critMg = worksheet.createRow((short) 36);
+        HSSFRow critMg = worksheet.createRow((short) 36);
             HSSFCell cellA37= critMg.createCell((short) 0);
             cellA37.setCellValue("Mg");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critAl = worksheet.createRow((short) 37);
+        HSSFRow critAl = worksheet.createRow((short) 37);
             HSSFCell cellA38= critAl.createCell((short) 0);
             cellA38.setCellValue("Al");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critK = worksheet.createRow((short) 38);
+        HSSFRow critK = worksheet.createRow((short) 38);
             HSSFCell cellA39= critK.createCell((short) 0);
             cellA39.setCellValue("K");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critCa = worksheet.createRow((short) 39);
+        HSSFRow critCa = worksheet.createRow((short) 39);
             HSSFCell cellA40= critCa.createCell((short) 0);
             cellA40.setCellValue("Ca");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critCr = worksheet.createRow((short) 40);
+        HSSFRow critCr = worksheet.createRow((short) 40);
             HSSFCell cellA41= critCr.createCell((short) 0);
             cellA41.setCellValue("Cr");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critMn = worksheet.createRow((short) 41);
+        HSSFRow critMn = worksheet.createRow((short) 41);
             HSSFCell cellA42= critMn.createCell((short) 0);
-            cellA42.setCellValue("Cr");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellA42.setCellValue("Mn");
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critFe = worksheet.createRow((short) 42);
+        HSSFRow critFe = worksheet.createRow((short) 42);
             HSSFCell cellA43= critFe.createCell((short) 0);
             cellA43.setCellValue("Fe");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critNi = worksheet.createRow((short) 43);
+        HSSFRow critNi = worksheet.createRow((short) 43);
             HSSFCell cellA44= critNi.createCell((short) 0);
-            cellA44.setCellValue("Cr");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellA44.setCellValue("Ni");
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critCu = worksheet.createRow((short) 44);
+        HSSFRow critCu = worksheet.createRow((short) 44);
             HSSFCell cellA45= critCu.createCell((short) 0);
             cellA45.setCellValue("Cu");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
+            cellStyle.setFont(fontBold);
             
-            HSSFRow critTot = worksheet.createRow((short) 45);
+        HSSFRow critTot = worksheet.createRow((short) 45);
             HSSFCell cellA46= critTot.createCell((short) 0);
             cellA46.setCellValue("Total: ");
-            cellStyle = workbook.createCellStyle();
-            cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
-            cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
-            //****************************************************************************************************************             
-            
-            
+            cellStyle.setFont(fontBold);
             
             workbook.write(ions);
             ions.flush();
         }
             templatePath = template.getAbsolutePath();
-            PDFGui.go(templatePath, selectedFiles, size);
-            //addToExcel(list, Ion, material, lotNum, size, path);
+            PDFGui.go(templatePath, selectedFiles, size); 
            } catch (IOException ex) {
         Logger.getLogger(PDFTest.class.getName()).log(Level.SEVERE, null, ex);
     }
@@ -687,11 +611,16 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             HSSFWorkbook workbook = new HSSFWorkbook(template);
             HSSFSheet worksheet = workbook.getSheetAt(0);
             
+            Font fontBold = workbook.createFont();
+            fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
+            Font fontRed = workbook.createFont();
+            fontRed.setColor(HSSFColor.RED.index);
+            
+            HSSFCellStyle cellStyle = workbook.createCellStyle();
             System.out.println("n = " + n);
             
             System.out.println("Files to work with: ");
             System.out.print(selectedFileSize + ", on number " + n);
-            HSSFCellStyle cellStyle = workbook.createCellStyle();
             
             HSSFRow name = worksheet.getRow((short) 0);
                 HSSFCell cellA1 = name.getCell((short) 0);
@@ -875,28 +804,28 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             // index from 0,0... cell A1 is cell(0,0)
                 HSSFCell cellB1 = name.createCell((short) n);
                 cellB1.setCellValue(listString[i]);
-                cellStyle = workbook.createCellStyle();
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.GOLD.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
                 
                 HSSFCell cellB2 = lot.createCell((short) n);
                 cellB2.setCellValue(listString[i]);
-                cellStyle = workbook.createCellStyle();
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                  i++;
                  
                 HSSFCell cellB3 = stage.createCell((short) n);
                 cellB3.setCellValue(listString[i]);
-                cellStyle = workbook.createCellStyle();
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
                  
                 HSSFCell cellB4 = conc.createCell((short) n);
                 cellB4.setCellValue("Conc. (ppb)");
-                cellStyle = workbook.createCellStyle();
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -905,7 +834,6 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 HSSFCell cellB5 = Be.createCell((short) n);
                 cellB5.setCellValue(Double.parseDouble(listString[i]));
-                cellStyle = workbook.createCellStyle();
                 cellStyle.setFillForegroundColor(HSSFColor.GREEN.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -913,7 +841,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
     
                 HSSFCell cellB6 = Na.createCell((short) n);
                 cellB6.setCellValue(Double.parseDouble(listString[i]));
-                cellStyle = workbook.createCellStyle();
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -922,7 +850,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 HSSFCell cellB7 = Mg.createCell((short) n);
                 cellB7.setCellValue(Double.parseDouble(listString[i]));
-                cellStyle = workbook.createCellStyle();
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -931,6 +859,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                
                 HSSFCell cellB8 = Al.createCell((short) n);
                 cellB8.setCellValue(Double.parseDouble(listString[i]));
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -939,6 +868,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 HSSFCell cellB9 = K.createCell((short) n);
                 cellB9.setCellValue(Double.parseDouble(listString[i]));
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -947,6 +877,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             
                 HSSFCell cellB10 = Ca.createCell((short) n);
                 cellB10.setCellValue(Double.parseDouble(listString[i]));
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -962,6 +893,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             
                 HSSFCell cellB12 = Cr.createCell((short) n);
                 cellB12.setCellValue(Double.parseDouble(listString[i]));
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -970,6 +902,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 HSSFCell cellB13 = Mn.createCell((short) n);
                 cellB13.setCellValue(Double.parseDouble(listString[i]));
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -978,6 +911,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 HSSFCell cellB14 = Fe.createCell((short) n);
                 cellB14.setCellValue(Double.parseDouble(listString[i]));
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -994,6 +928,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 HSSFCell cellB16 = Ni.createCell((short) n);
                 cellB16.setCellValue(Double.parseDouble(listString[i]));
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -1002,6 +937,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 HSSFCell cellB17 = Cu.createCell((short) n);
                 cellB17.setCellValue(Double.parseDouble(listString[i]));
+                cellStyle.setFont(fontBold);
                 cellStyle.setFillForegroundColor(HSSFColor.LIGHT_CORNFLOWER_BLUE.index);
                 cellStyle.setFillPattern(HSSFCellStyle.SOLID_FOREGROUND);
                 i++;
@@ -1218,8 +1154,8 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
         fileOut.flush();
         
             n++;
-        String destinationPath = material + "_" + nameLot + "_Ions.xls";
-          
+       // String destinationPath = material + "_" + nameLot + "_Ions.xls";
+         String destinationPath = "test_ions.xls"; 
           
             System.out.println("*************Template filled*************");
             System.out.println("Now renaming file for you");

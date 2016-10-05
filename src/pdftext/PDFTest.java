@@ -773,7 +773,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             
 
             for (int r = 0; r < size; r++){ // check each row
-               if(n == size){
+               if(n-1 == size){
                    break;
                }
                    Row rw = worksheet.getRow(r);

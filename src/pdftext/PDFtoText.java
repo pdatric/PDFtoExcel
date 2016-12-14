@@ -57,7 +57,18 @@ import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellUtil;
 import java.lang.Runtime;
+import java.util.Collections;
+import javafx.beans.value.ChangeListener;
+import javafx.event.EventType;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.Tooltip;
+import javafx.scene.input.ClipboardContent;
+import javafx.scene.input.Dragboard;
+import static javafx.scene.input.KeyCode.T;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.TransferMode;
+import javax.swing.SortOrder;
+import static org.apache.poi.hssf.usermodel.HeaderFooter.file;
 import org.apache.poi.ss.usermodel.CellStyle;
 import static org.apache.poi.ss.usermodel.CellStyle.ALIGN_CENTER;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -67,29 +78,44 @@ import org.apache.poi.ss.usermodel.IndexedColors;
  * @author pluebbert
  */
 public class PDFtoText extends Application implements EventHandler<ActionEvent> {
-    
+    //Global Variables
      Button okBtn;
      Button selectBtn;
      Button closeBtn;
      Button clearBtn;
-     
+     Button moveUp;
+     Button moveDown;
      
      static TextField field;
      static String outputName;
      static String destinationPath;
+     static String fPath;
+     static int size; 
      
      static boolean isEmpty;
      
+     File[] file;
      ListView<File> listView;
-     List<File> selectedFiles;
+     
+     
+     
+     ListView<String> listViewStrings;
+     static List<String> sortedStrings;
+     
+     static List<File >selectedFiles;
      List<File> tmpList;
+     List<String> tmpString;
      Stage savedStage;
+     
+     String selectedString;
      
      static File tmp;
      static File output;
      static File csvFile;
      
      static double zero = 0.00;
+    
+    //Start the GUI 
     @Override
     public void start(Stage stage) {
         initUI(stage);
@@ -124,44 +150,46 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
         Label lbl = new Label("File Name:");
         field = new TextField();
         listView = new ListView<File>();
+        listViewStrings = new ListView<String>();
+        
+        
         okBtn = new Button("OK");
         selectBtn = new Button("Select PDF's");
         closeBtn = new Button("Close");
         clearBtn = new Button("Clear");
-        
+        moveUp = new Button ("Up");
+        moveDown = new Button ("Down");
         
                 //Actions
         okBtn.setOnAction(this);   
         selectBtn.setOnAction(this);
         //closeBtn.setOnAction(this);
-        //clearBtn.setOnAction(this);
+        //lcearBtn.setOnAction(this);
+        moveUp.setOnAction(this);
+        moveDown.setOnAction(this);
         
                //tooltips
         field.setTooltip(new Tooltip("Type what you would like the resulting .xls to be named."
                 + " If left blank, the name will be the name and lot# of the sample"));
-        // clearBtn.setTooltip(new Tooltip("Clears the program for a new workbook"));
-        
-        
-        
-        field.setOnKeyPressed(new EventHandler<KeyEvent>(){
-            @Override
-            public void handle(KeyEvent e) {
-                if(e.getCode() == KeyCode.ENTER) {
-                    System.out.println(field.getText());
-                    outputName = field.getText();
-                }
-            }
-        });             
+        clearBtn.setTooltip(new Tooltip("Clears the program for a new workbook"));
+        okBtn.setTooltip(new Tooltip("Click to run"));
+        selectBtn.setTooltip(new Tooltip("Select all of the PDF files you want in excel"));
+        listViewStrings.setTooltip(new Tooltip("List of all selected files"));
         
         GridPane.setHalignment(okBtn, HPos.RIGHT);
 
         root.add(lbl, 0, 0);
         root.add(field, 1, 0, 3, 1);
-        root.add(listView, 0, 1, 4, 2);
+        //root.add(listView, 0, 1, 4, 2);
+        
+        root.add(listViewStrings, 0,1,4,2);
+        
         root.add(okBtn, 3, 3);
         //root.add(closeBtn, 3, 3);
-        root.add(selectBtn, 1, 3);
-        // root.add(clearBtn, 0, 3);
+        root.add(selectBtn, 2, 3);
+      //  root.add(clearBtn, 0, 3);
+        root.add(moveUp, 0,3);
+        root.add(moveDown, 1,3);
         
         Scene scene = new Scene(root, 280, 300);
 
@@ -192,6 +220,8 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
                 FileChooser();
             } catch (FileNotFoundException ex) {
                 Logger.getLogger(PDFtoText.class.getName()).log(Level.SEVERE, null, ex);
+            } catch (IOException ex) {
+                Logger.getLogger(PDFtoText.class.getName()).log(Level.SEVERE, null, ex);
             }
             
         }
@@ -199,60 +229,60 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
         if(event.getSource()==closeBtn) {
             System.out.println("Close");
         }
-     //Clear Button   
-        
-        
-     
-        /*if(event.getSource()==clearBtn) {
-            System.out.println("Clear");
+     //Move selected Up   
+        if(event.getSource()==moveUp){
+            System.out.println("Move up");
             
-            ;
             
-            if(tmp.delete() && csvFile.delete()){  
-                
-                 System.out.println(tmp.getName() + " and " + csvFile.getName() + " were deleted.");
-            }
-             else{
-                 System.out.println("File could not be deleted.");
-             } 
-            
-            System.out.println(selectedFiles);
-            
-        }*/
+        }
+     //Move selected down    
+        if(event.getSource()==moveDown){
+            System.out.println("Move Down");
+        }
      
     }
     
-    private List<File> FileChooser() throws FileNotFoundException {
+    private List<String> FileChooser() throws FileNotFoundException, IOException {
         
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select PDF Files");
         
         fileChooser.getExtensionFilters().addAll(
                 new ExtensionFilter("PDF Files", "*.pdf"));
-        selectedFiles = fileChooser.showOpenMultipleDialog(savedStage);
+        selectedFiles = fileChooser.showOpenMultipleDialog(savedStage); //saves all selected files in a file list
+        List<String> selStrings = new ArrayList();
         
-        for(int i=0; i<selectedFiles.size(); i ++){ 
-            listView.getItems().add(selectedFiles.get(i));
-        }
+        for (int i = 0; i<selectedFiles.size();i++){
+            String tempFilePath = selectedFiles.get(i).getAbsolutePath();
+             System.out.println(tempFilePath);
+             selStrings.add(tempFilePath);
+            }
         
-      return selectedFiles;
-    }
+        
+        toListView(selStrings);
+ 
+      return selStrings;
+    }   
+
+    private void toListView(List<String> selStrings){
+      Collections.sort(selStrings);
+    
+      for(int i=0; i<selStrings.size(); i++){
+             listViewStrings.getItems().add(selStrings.get(i));  
+          }
+        
+    }   
+    
     
  public void runTemplateCreator() {
      if (selectedFiles !=null){
-         int size = selectedFiles.size();
-         excelTemplate(selectedFiles, size);
+         size = selectedFiles.size();
+         
+         excelTemplate();
    
          }
      }
- public static void convert(String templatePath, int size, List<File> selectedFiles){
-         
-         for(int i = 0; i < selectedFiles.size(); i++){
-             String fPath = selectedFiles.get(i).toString();
-             System.out.println("LOOK AT ME " + fPath);
-             pdfTotxt(fPath, size, templatePath);
-        }
- }
+ 
     /**
      * @param args the command line arguments
      */
@@ -271,8 +301,374 @@ public static int selectedFileSize = 0;
 public static int n = 1;
 public static String [] alphabet = {"A", "B", "C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
 
+public static void excelTemplate(){   
+    tmp = new File("Template_Ions.xls");
+    boolean exists = tmp.exists();
     
-    public static void pdfTotxt(String fPath, int size, String templatePath) {
+    if(exists)
+        {
+        String templatePath = tmp.getAbsolutePath();
+            convert(templatePath);
+        }
+    
+    else 
+    {
+    
+    System.out.println("***********************");
+    System.out.println("Creating Excel Template");
+    System.out.println("***********************");
+    
+    String templatePath = null; 
+    try { 
+        File template = new File("Template_Ions.xls"); //creates the template file
+        template.createNewFile();
+        try (FileOutputStream ions = new FileOutputStream(template, false)) {
+            HSSFWorkbook workbook = new HSSFWorkbook();
+            HSSFSheet worksheet = workbook.createSheet("Ions");
+            
+            Font fontBold = workbook.createFont();
+            fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
+            Font fontRed = workbook.createFont();
+            fontRed.setColor(HSSFColor.RED.index);
+            
+            //Grey Cell Style
+            HSSFCellStyle greyStyle = workbook.createCellStyle();
+                
+                greyStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                greyStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
+                greyStyle.setAlignment(ALIGN_CENTER);
+                greyStyle.setBorderBottom(HSSFCellStyle.BORDER_THIN);
+                greyStyle.setBorderTop(HSSFCellStyle.BORDER_THIN);
+                greyStyle.setBorderLeft(HSSFCellStyle.BORDER_THIN);
+                greyStyle.setBorderRight(HSSFCellStyle.BORDER_THIN);
+            
+            HSSFCellStyle greyStyleBold = workbook.createCellStyle();
+                greyStyleBold.setFont(fontBold);
+                greyStyleBold.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                greyStyleBold.setFillPattern(CellStyle.SOLID_FOREGROUND);
+                greyStyleBold.setAlignment(ALIGN_CENTER);
+                greyStyleBold.setBorderBottom(HSSFCellStyle.BORDER_THIN);
+                greyStyleBold.setBorderTop(HSSFCellStyle.BORDER_THIN);
+                greyStyleBold.setBorderLeft(HSSFCellStyle.BORDER_THIN);
+                greyStyleBold.setBorderRight(HSSFCellStyle.BORDER_THIN);
+                
+            System.out.println("Populating common fields..... ");
+            
+            System.out.println(selectedFileSize);
+            /* rest of this method creates each row, then creates the first cell 
+               of the column and fills it with the ions template */
+            String[] nameString = {"name", "lot", "stage", "conc", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr","Mn","Fe","Co","Ni","Cu","Ga","Zr","Mo","Ru","Cd","In","Sn","Li","Zn","Sb","W","Pb", "row30","row31","critHeader","critLot","critConc","critNa","critMg","critAl","critK","critCa","critCr","critMn","critFe","critNi","critCu","critTot"};
+           
+           System.out.println("Name sting: ");
+            for (String nameString1 : nameString) {
+                System.out.print(nameString1 + ", ");
+            }
+            
+            System.out.println("Cell String: ");
+            String[] cells = new String[50];//cellA1-A46
+                for(int i=0; i<46; i++){
+                    cells[i] = "cellA"+(i+1);
+                    System.out.print(cells[i] + ", ");
+                }
+                
+                
+           System.out.println("Text String: ");
+           String[] text = {"Name: ", "Lot #: ", "Stage: ", "Analyte: ", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr","Mn","Fe","Co","Ni","Cu","Ga","Zr","Mo","Ru","Cd","In","Sn","Li","Zn","Sb","W","Pb", "row30","row31","10 Critical Ions","Lot: ","Conc: ","Na","Mg","Al","K","Ca","Cr","Mn","Fe","Ni","Cu","Total: "};
+            for(int i = 0; i < nameString.length; i ++) {
+            System.out.print(text[i]+", " );
+            }
+            System.out.println("**");
+            
+            System.out.println("Text list is " + text.length + " indexies long.");
+            
+                
+                System.out.println("woo");
+          
+      /*  for (int i = 0; i < text.length; i ++){
+            HSSFRow row = worksheet.createRow((short) i);
+            HSSFCell cell = row.createCell((short) 0);
+                
+                    cell.setCellValue(text[i]);  
+            }
+            for (int i = text.length; i < text.length + 5; i++){
+                HSSFRow row = worksheet.createRow((short) i);
+                HSSFCell cell = row.createCell((short) 0);
+            }*/
+                
+               
+       HSSFRow name = worksheet.createRow((short) 0);
+            HSSFCell cellA1 = name.createCell((short) 0);
+            cellA1.setCellValue("Name: ");
+            cellA1.setCellStyle(greyStyleBold);
+            
+            
+          
+        HSSFRow lot = worksheet.createRow((short) 1);
+            HSSFCell cellA2 = lot.createCell((short) 0);
+            cellA2.setCellValue("Lot #: ");
+            cellA2.setCellStyle(greyStyleBold);            
+            
+            
+
+        HSSFRow stage = worksheet.createRow((short) 2);
+            HSSFCell cellA3 = stage.createCell((short) 0);
+            cellA3.setCellValue("Stage: ");
+            cellA3.setCellStyle(greyStyleBold);
+            
+            
+            
+            
+        HSSFRow conc = worksheet.createRow((short) 3);
+            HSSFCell cellA4 = conc.createCell((short) 0);
+            cellA4.setCellValue("Analyte");
+            cellA4.setCellStyle(greyStyleBold);
+            
+            
+        HSSFRow Be = worksheet.createRow((short) 4);
+            HSSFCell cellA5= Be.createCell((short) 0);
+            cellA5.setCellValue("Be");
+            cellA5.setCellStyle(greyStyle);
+            
+            
+        HSSFRow Na = worksheet.createRow((short) 5);
+            HSSFCell cellA6= Na.createCell((short) 0);
+            cellA6.setCellValue("Na");
+            cellA6.setCellStyle(greyStyleBold);
+            
+            
+        HSSFRow Mg = worksheet.createRow((short) 6);
+            HSSFCell cellA7= Mg.createCell((short) 0);
+            cellA7.setCellValue("Mg");
+            cellA7.setCellStyle(greyStyleBold);
+            
+        HSSFRow Al = worksheet.createRow((short) 7);
+            HSSFCell cellA8= Al.createCell((short) 0);
+            cellA8.setCellValue("Al");
+            cellA8.setCellStyle(greyStyleBold);
+            
+        HSSFRow K = worksheet.createRow((short) 8);
+            HSSFCell cellA9= K.createCell((short) 0);
+            cellA9.setCellValue("K");
+            cellA9.setCellStyle(greyStyleBold);
+            
+        HSSFRow Ca = worksheet.createRow((short) 9);
+            HSSFCell cellA10= Ca.createCell((short) 0);
+            cellA10.setCellValue("Ca");
+            cellA10.setCellStyle(greyStyleBold);
+            
+        HSSFRow Ti = worksheet.createRow((short) 10);
+            HSSFCell cellA11= Ti.createCell((short) 0);
+            cellA11.setCellValue("Ti");
+            cellA11.setCellStyle(greyStyle);
+            
+        HSSFRow Cr = worksheet.createRow((short) 11);
+            HSSFCell cellA12= Cr.createCell((short) 0);
+            cellA12.setCellValue("Cr");
+            cellA12.setCellStyle(greyStyleBold);
+            
+        HSSFRow Mn = worksheet.createRow((short) 12);
+            HSSFCell cellA13= Mn.createCell((short) 0);
+            cellA13.setCellValue("Mn");
+            cellA13.setCellStyle(greyStyleBold);
+            
+        HSSFRow Fe = worksheet.createRow((short) 13);
+            HSSFCell cellA14= Fe.createCell((short) 0);
+            cellA14.setCellValue("Fe");
+            cellA14.setCellStyle(greyStyleBold);
+        
+            
+        HSSFRow Co = worksheet.createRow((short) 14);
+            HSSFCell cellA15= Co.createCell((short) 0);
+            cellA15.setCellValue("Co");
+            cellA15.setCellStyle(greyStyle);
+            
+        HSSFRow Ni = worksheet.createRow((short) 15);
+            HSSFCell cellA16= Ni.createCell((short) 0);
+            cellA16.setCellValue("Ni");
+            cellA16.setCellStyle(greyStyleBold);
+        
+            
+        HSSFRow Cu = worksheet.createRow((short) 16);
+            HSSFCell cellA17= Cu.createCell((short) 0);
+            cellA17.setCellValue("Cu");
+            cellA17.setCellStyle(greyStyleBold);
+            
+        HSSFRow Ga = worksheet.createRow((short) 17);
+            HSSFCell cellA18= Ga.createCell((short) 0);
+            cellA18.setCellValue("Ga");
+            cellA18.setCellStyle(greyStyle);
+            
+        HSSFRow Zr = worksheet.createRow((short) 18);
+            HSSFCell cellA19= Zr.createCell((short) 0);
+            cellA19.setCellValue("Zr");
+            cellA19.setCellStyle(greyStyle);
+            
+        HSSFRow Mo = worksheet.createRow((short) 19);
+            HSSFCell cellA20= Mo.createCell((short) 0);
+            cellA20.setCellValue("Mo");
+            cellA20.setCellStyle(greyStyle);
+            
+        HSSFRow Ru = worksheet.createRow((short) 20);
+            HSSFCell cellA21= Ru.createCell((short) 0);
+            cellA21.setCellValue("Ru");
+            cellA21.setCellStyle(greyStyle);
+            
+        HSSFRow Cd = worksheet.createRow((short) 21);
+            HSSFCell cellA22= Cd.createCell((short) 0);
+            cellA22.setCellValue("Cd");
+            cellA22.setCellStyle(greyStyle);
+            
+        HSSFRow In = worksheet.createRow((short) 22);
+            HSSFCell cellA23= In.createCell((short) 0);
+            cellA23.setCellValue("In");
+            cellA23.setCellStyle(greyStyle);
+            
+        HSSFRow Sn = worksheet.createRow((short) 23);
+            HSSFCell cellA24= Sn.createCell((short) 0);
+            cellA24.setCellValue("Sn");
+            cellA24.setCellStyle(greyStyle);
+            
+        HSSFRow Li = worksheet.createRow((short) 24);
+            HSSFCell cellA25= Li.createCell((short) 0);
+            cellA25.setCellValue("Li");
+            cellA25.setCellStyle(greyStyle);
+            
+        HSSFRow Zn = worksheet.createRow((short) 25);
+            HSSFCell cellA26= Zn.createCell((short) 0);
+            cellA26.setCellValue("Zn");
+            cellA26.setCellStyle(greyStyle);
+            
+        HSSFRow Sb = worksheet.createRow((short) 26);
+            HSSFCell cellA27= Sb.createCell((short) 0);
+            cellA27.setCellValue("Sb");
+            cellA27.setCellStyle(greyStyle);
+            
+        HSSFRow W = worksheet.createRow((short) 27);
+            HSSFCell cellA28= W.createCell((short) 0);
+            cellA28.setCellValue("W");
+            cellA28.setCellStyle(greyStyle);
+            
+        HSSFRow Pb = worksheet.createRow((short) 28);
+            HSSFCell cellA29= Pb.createCell((short) 0);
+            cellA29.setCellValue("Pb");
+            cellA29.setCellStyle(greyStyle);    
+        
+        HSSFRow tot = worksheet.createRow((short) 29);
+            HSSFCell cellA30= tot.createCell((short) 0);
+            cellA30.setCellValue("Total: ");
+            cellA30.setCellStyle(greyStyle);    
+            
+        HSSFRow row30 = worksheet.createRow((short) 30);
+            HSSFCell cellA31= row30.createCell((short) 0);
+            
+        HSSFRow row31 = worksheet.createRow((short) 31);
+            HSSFCell cellA32= row30.createCell((short) 0);
+            
+        HSSFRow critHeader = worksheet.createRow((short) 32);
+            HSSFCell cellA33= critHeader.createCell((short) 0);
+            cellA33.setCellValue("10 Critical Ions");
+            worksheet.addMergedRegion(new CellRangeAddress(32,32,0,size));
+            cellA33.setCellStyle(greyStyle);
+            
+            
+        HSSFRow critLot = worksheet.createRow((short) 33);
+            HSSFCell cellA34= critLot.createCell((short) 0);
+            cellA34.setCellValue("Lot: ");
+            cellA34.setCellStyle(greyStyle);
+            
+        HSSFRow critConc = worksheet.createRow((short) 34);
+            HSSFCell cellA35= critConc.createCell((short) 0);
+            cellA35.setCellValue("Analyte");
+            cellA35.setCellStyle(greyStyle);
+            
+        HSSFRow critNa = worksheet.createRow((short) 35);
+            HSSFCell cellA36= critNa.createCell((short) 0);
+            cellA36.setCellValue("Na");
+            cellA36.setCellStyle(greyStyle);
+            
+        HSSFRow critMg = worksheet.createRow((short) 36);
+            HSSFCell cellA37= critMg.createCell((short) 0);
+            cellA37.setCellValue("Mg");
+            cellA37.setCellStyle(greyStyle);
+            
+        HSSFRow critAl = worksheet.createRow((short) 37);
+            HSSFCell cellA38= critAl.createCell((short) 0);
+            cellA38.setCellValue("Al");
+            cellA38.setCellStyle(greyStyle);
+            
+        HSSFRow critK = worksheet.createRow((short) 38);
+            HSSFCell cellA39= critK.createCell((short) 0);
+            cellA39.setCellValue("K");
+            cellA39.setCellStyle(greyStyle);
+            
+        HSSFRow critCa = worksheet.createRow((short) 39);
+            HSSFCell cellA40= critCa.createCell((short) 0);
+            cellA40.setCellValue("Ca");
+            cellA40.setCellStyle(greyStyle);
+            
+        HSSFRow critCr = worksheet.createRow((short) 40);
+            HSSFCell cellA41= critCr.createCell((short) 0);
+            cellA41.setCellValue("Cr");
+            cellA41.setCellStyle(greyStyle);
+            
+        HSSFRow critMn = worksheet.createRow((short) 41);
+            HSSFCell cellA42= critMn.createCell((short) 0);
+            cellA42.setCellValue("Mn");
+            cellA42.setCellStyle(greyStyle);
+            
+        HSSFRow critFe = worksheet.createRow((short) 42);
+            HSSFCell cellA43= critFe.createCell((short) 0);
+            cellA43.setCellValue("Fe");
+            cellA43.setCellStyle(greyStyle);
+            
+        HSSFRow critNi = worksheet.createRow((short) 43);
+            HSSFCell cellA44= critNi.createCell((short) 0);
+            cellA44.setCellValue("Ni");
+            cellA44.setCellStyle(greyStyle);
+            
+        HSSFRow critCu = worksheet.createRow((short) 44);
+            HSSFCell cellA45= critCu.createCell((short) 0);
+            cellA45.setCellValue("Cu");
+            cellA45.setCellStyle(greyStyle);
+            
+        HSSFRow critTot = worksheet.createRow((short) 45);
+            HSSFCell cellA46= critTot.createCell((short) 0);
+            cellA46.setCellValue("Total: ");
+            cellA46.setCellStyle(greyStyle);
+            
+            workbook.write(ions);
+            ions.flush();
+        
+        }
+        
+            templatePath = template.getAbsolutePath();
+             convert(templatePath); 
+           } catch (IOException ex) {
+        Logger.getLogger(PDFtoText.class.getName()).log(Level.SEVERE, null, ex);
+    }
+    }
+}  
+public static void convert(String templatePath){
+         
+        List<String> selStrings = new ArrayList();
+        
+        for (int i = 0; i<selectedFiles.size();i++){
+            String tempFilePath = selectedFiles.get(i).getAbsolutePath();
+             System.out.println(tempFilePath);
+             selStrings.add(tempFilePath);
+            }
+        
+        Collections.sort(selStrings); //sorts alphabetically 
+        
+         for(int i = 0; i < selStrings.size(); i++){
+             fPath = selStrings.get(i);
+             System.out.println("LOOK AT ME " + fPath);
+             pdfTotxt(fPath, templatePath);
+        }
+ }
+public static void pdfTotxt(String fPath, String templatePath) {
+    
+    
         selectedFileSize = size;
         PDDocument pd;
         BufferedWriter wr;
@@ -297,14 +693,14 @@ public static String [] alphabet = {"A", "B", "C","D","E","F","G","H","I","J","K
             }
             
             wr.close();
-            txtToCsv(size, templatePath);
+            txtToCsv( templatePath);
         } catch (Exception e){
         }
     }
 
     
  
- public static void txtToCsv(int size, String templatePath) throws FileNotFoundException, IOException{
+public static void txtToCsv( String templatePath) throws FileNotFoundException, IOException{
      FileWriter writer = null;
       
         File file = new File("C:\\PDFTester\\output.txt");
@@ -329,10 +725,10 @@ public static String [] alphabet = {"A", "B", "C","D","E","F","G","H","I","J","K
             writer.flush(); 
         }
         file.delete();
-        getData(size, templatePath);
+        getData( templatePath);
      }
 
-public static void getData(int size, String templatePath) throws FileNotFoundException, IOException{
+public static void getData( String templatePath) throws FileNotFoundException, IOException{
     System.out.println("******************************");
     String stage = null;
     String a = null;
@@ -530,349 +926,12 @@ public static void getData(int size, String templatePath) throws FileNotFoundExc
     }
          
        
-       addToExcel(list, Ion, material, lotNum, size, templatePath);
+       addToExcel(list, Ion, material, lotNum, templatePath);
 }  
-//public static void excelTemplate(List list, List Ion, String material, String lotNum, int size) throws IOException{
-public static void excelTemplate(List selectedFiles, int size){   
-    tmp = new File("Template_Ions.xls");
-    boolean exists = tmp.exists();
-    
-    if(exists)
-        {
-        String templatePath = tmp.getAbsolutePath();
-            convert(templatePath, size, selectedFiles);
-        }
-    
-    else 
-    {
-    
-    System.out.println("***********************");
-    System.out.println("Creating Excel Template");
-    System.out.println("***********************");
-    
-    String templatePath = null; 
-    try { 
-        File template = new File("Template_Ions.xls"); //creates the template file
-        template.createNewFile();
-        try (FileOutputStream ions = new FileOutputStream(template, false)) {
-            HSSFWorkbook workbook = new HSSFWorkbook();
-            HSSFSheet worksheet = workbook.createSheet("Ions");
-            
-            Font fontBold = workbook.createFont();
-            fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
-            Font fontRed = workbook.createFont();
-            fontRed.setColor(HSSFColor.RED.index);
-            
-            //Grey Cell Style
-            HSSFCellStyle greyStyle = workbook.createCellStyle();
-                greyStyle.setFont(fontBold);
-                greyStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-                greyStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
-                greyStyle.setAlignment(ALIGN_CENTER);
-                greyStyle.setBorderBottom(HSSFCellStyle.BORDER_THIN);
-                greyStyle.setBorderTop(HSSFCellStyle.BORDER_THIN);
-                greyStyle.setBorderLeft(HSSFCellStyle.BORDER_THIN);
-                greyStyle.setBorderRight(HSSFCellStyle.BORDER_THIN);
-            
-            
-            System.out.println("Populating common fields..... ");
-            
-            System.out.println(selectedFileSize);
-            /* rest of this method creates each row, then creates the first cell 
-               of the column and fills it with the ions template */
-            String[] nameString = {"name", "lot", "stage", "conc", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr","Mn","Fe","Co","Ni","Cu","Ga","Zr","Mo","Ru","Cd","In","Sn","Li","Zn","Sb","W","Pb", "row30","row31","critHeader","critLot","critConc","critNa","critMg","critAl","critK","critCa","critCr","critMn","critFe","critNi","critCu","critTot"};
-           
-           System.out.println("Name sting: ");
-            for (String nameString1 : nameString) {
-                System.out.print(nameString1 + ", ");
-            }
-            
-            System.out.println("Cell String: ");
-            String[] cells = new String[50];//cellA1-A46
-                for(int i=0; i<46; i++){
-                    cells[i] = "cellA"+(i+1);
-                    System.out.print(cells[i] + ", ");
-                }
-                
-                
-           System.out.println("Text String: ");
-           String[] text = {"Name: ", "Lot #: ", "Stage: ", "Analyte: ", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr","Mn","Fe","Co","Ni","Cu","Ga","Zr","Mo","Ru","Cd","In","Sn","Li","Zn","Sb","W","Pb", "row30","row31","10 Critical Ions","Lot: ","Conc: ","Na","Mg","Al","K","Ca","Cr","Mn","Fe","Ni","Cu","Total: "};
-            for(int i = 0; i < nameString.length; i ++) {
-            System.out.print(text[i]+", " );
-            }
-            System.out.println("**");
-            
-            System.out.println("Text list is " + text.length + " indexies long.");
-            
-                
-                System.out.println("woo");
-          
-      /*  for (int i = 0; i < text.length; i ++){
-            HSSFRow row = worksheet.createRow((short) i);
-            HSSFCell cell = row.createCell((short) 0);
-                
-                    cell.setCellValue(text[i]);  
-            }
-            for (int i = text.length; i < text.length + 5; i++){
-                HSSFRow row = worksheet.createRow((short) i);
-                HSSFCell cell = row.createCell((short) 0);
-            }*/
-                
-               
-       HSSFRow name = worksheet.createRow((short) 0);
-            HSSFCell cellA1 = name.createCell((short) 0);
-            cellA1.setCellValue("Name: ");
-            cellA1.setCellStyle(greyStyle);
-            
-            
-          
-        HSSFRow lot = worksheet.createRow((short) 1);
-            HSSFCell cellA2 = lot.createCell((short) 0);
-            cellA2.setCellValue("Lot #: ");
-            cellA2.setCellStyle(greyStyle);            
-            
-            
 
-        HSSFRow stage = worksheet.createRow((short) 2);
-            HSSFCell cellA3 = stage.createCell((short) 0);
-            cellA3.setCellValue("Stage: ");
-            cellA3.setCellStyle(greyStyle);
-            
-            
-            
-            
-        HSSFRow conc = worksheet.createRow((short) 3);
-            HSSFCell cellA4 = conc.createCell((short) 0);
-            cellA4.setCellValue("Analyte");
-            cellA4.setCellStyle(greyStyle);
-            
-            
-        HSSFRow Be = worksheet.createRow((short) 4);
-            HSSFCell cellA5= Be.createCell((short) 0);
-            cellA5.setCellValue("Be");
-            cellA5.setCellStyle(greyStyle);
-            
-            
-        HSSFRow Na = worksheet.createRow((short) 5);
-            HSSFCell cellA6= Na.createCell((short) 0);
-            cellA6.setCellValue("Na");
-            cellA6.setCellStyle(greyStyle);
-            
-            
-        HSSFRow Mg = worksheet.createRow((short) 6);
-            HSSFCell cellA7= Mg.createCell((short) 0);
-            cellA7.setCellValue("Mg");
-            cellA7.setCellStyle(greyStyle);
-            
-        HSSFRow Al = worksheet.createRow((short) 7);
-            HSSFCell cellA8= Al.createCell((short) 0);
-            cellA8.setCellValue("Al");
-            cellA8.setCellStyle(greyStyle);
-            
-        HSSFRow K = worksheet.createRow((short) 8);
-            HSSFCell cellA9= K.createCell((short) 0);
-            cellA9.setCellValue("K");
-            cellA9.setCellStyle(greyStyle);
-            
-        HSSFRow Ca = worksheet.createRow((short) 9);
-            HSSFCell cellA10= Ca.createCell((short) 0);
-            cellA10.setCellValue("Ca");
-            cellA10.setCellStyle(greyStyle);
-            
-        HSSFRow Ti = worksheet.createRow((short) 10);
-            HSSFCell cellA11= Ti.createCell((short) 0);
-            cellA11.setCellValue("Ti");
-            cellA11.setCellStyle(greyStyle);
-            
-        HSSFRow Cr = worksheet.createRow((short) 11);
-            HSSFCell cellA12= Cr.createCell((short) 0);
-            cellA12.setCellValue("Cr");
-            cellA12.setCellStyle(greyStyle);
-            
-        HSSFRow Mn = worksheet.createRow((short) 12);
-            HSSFCell cellA13= Mn.createCell((short) 0);
-            cellA13.setCellValue("Mn");
-            cellA13.setCellStyle(greyStyle);
-            
-        HSSFRow Fe = worksheet.createRow((short) 13);
-            HSSFCell cellA14= Fe.createCell((short) 0);
-            cellA14.setCellValue("Fe");
-            cellA14.setCellStyle(greyStyle);
-        
-            
-        HSSFRow Co = worksheet.createRow((short) 14);
-            HSSFCell cellA15= Co.createCell((short) 0);
-            cellA15.setCellValue("Co");
-            cellA15.setCellStyle(greyStyle);
-            
-        HSSFRow Ni = worksheet.createRow((short) 15);
-            HSSFCell cellA16= Ni.createCell((short) 0);
-            cellA16.setCellValue("Ni");
-            cellA16.setCellStyle(greyStyle);
-        
-            
-        HSSFRow Cu = worksheet.createRow((short) 16);
-            HSSFCell cellA17= Cu.createCell((short) 0);
-            cellA17.setCellValue("Cu");
-            cellA17.setCellStyle(greyStyle);
-            
-        HSSFRow Ga = worksheet.createRow((short) 17);
-            HSSFCell cellA18= Ga.createCell((short) 0);
-            cellA18.setCellValue("Ga");
-            cellA18.setCellStyle(greyStyle);
-            
-        HSSFRow Zr = worksheet.createRow((short) 18);
-            HSSFCell cellA19= Zr.createCell((short) 0);
-            cellA19.setCellValue("Zr");
-            cellA19.setCellStyle(greyStyle);
-            
-        HSSFRow Mo = worksheet.createRow((short) 19);
-            HSSFCell cellA20= Mo.createCell((short) 0);
-            cellA20.setCellValue("Mo");
-            cellA20.setCellStyle(greyStyle);
-            
-        HSSFRow Ru = worksheet.createRow((short) 20);
-            HSSFCell cellA21= Ru.createCell((short) 0);
-            cellA21.setCellValue("Ru");
-            cellA21.setCellStyle(greyStyle);
-            
-        HSSFRow Cd = worksheet.createRow((short) 21);
-            HSSFCell cellA22= Cd.createCell((short) 0);
-            cellA22.setCellValue("Cd");
-            cellA22.setCellStyle(greyStyle);
-            
-        HSSFRow In = worksheet.createRow((short) 22);
-            HSSFCell cellA23= In.createCell((short) 0);
-            cellA23.setCellValue("In");
-            cellA23.setCellStyle(greyStyle);
-            
-        HSSFRow Sn = worksheet.createRow((short) 23);
-            HSSFCell cellA24= Sn.createCell((short) 0);
-            cellA24.setCellValue("Sn");
-            cellA24.setCellStyle(greyStyle);
-            
-        HSSFRow Li = worksheet.createRow((short) 24);
-            HSSFCell cellA25= Li.createCell((short) 0);
-            cellA25.setCellValue("Li");
-            cellA25.setCellStyle(greyStyle);
-            
-        HSSFRow Zn = worksheet.createRow((short) 25);
-            HSSFCell cellA26= Zn.createCell((short) 0);
-            cellA26.setCellValue("Zn");
-            cellA26.setCellStyle(greyStyle);
-            
-        HSSFRow Sb = worksheet.createRow((short) 26);
-            HSSFCell cellA27= Sb.createCell((short) 0);
-            cellA27.setCellValue("Sb");
-            cellA27.setCellStyle(greyStyle);
-            
-        HSSFRow W = worksheet.createRow((short) 27);
-            HSSFCell cellA28= W.createCell((short) 0);
-            cellA28.setCellValue("W");
-            cellA28.setCellStyle(greyStyle);
-            
-        HSSFRow Pb = worksheet.createRow((short) 28);
-            HSSFCell cellA29= Pb.createCell((short) 0);
-            cellA29.setCellValue("Pb");
-            cellA29.setCellStyle(greyStyle);
-            
-            
-        HSSFRow tot = worksheet.createRow((short) 29);
-            HSSFCell cellA30= tot.createCell((short) 0);
-            cellA30.setCellValue("Total: ");
-            cellA30.setCellStyle(greyStyle);    
-        /*HSSFRow row30 = worksheet.createRow((short) 30);
-            HSSFCell cellA31= tot.createCell((short) 0);
-            
-        HSSFRow row31 = worksheet.createRow((short) 31);
-            HSSFCell cellA32= tot.createCell((short) 0);*/
-            
-        HSSFRow critHeader = worksheet.createRow((short) 32);
-            HSSFCell cellA33= critHeader.createCell((short) 0);
-            cellA33.setCellValue("10 Critical Ions");
-            worksheet.addMergedRegion(new CellRangeAddress(32,32,0,size));
-            cellA33.setCellStyle(greyStyle);
-            
-            
-        HSSFRow critLot = worksheet.createRow((short) 33);
-            HSSFCell cellA34= critLot.createCell((short) 0);
-            cellA34.setCellValue("Lot: ");
-            cellA34.setCellStyle(greyStyle);
-            
-        HSSFRow critConc = worksheet.createRow((short) 34);
-            HSSFCell cellA35= critConc.createCell((short) 0);
-            cellA35.setCellValue("Analyte");
-            cellA35.setCellStyle(greyStyle);
-            
-        HSSFRow critNa = worksheet.createRow((short) 35);
-            HSSFCell cellA36= critNa.createCell((short) 0);
-            cellA36.setCellValue("Na");
-            cellA36.setCellStyle(greyStyle);
-            
-        HSSFRow critMg = worksheet.createRow((short) 36);
-            HSSFCell cellA37= critMg.createCell((short) 0);
-            cellA37.setCellValue("Mg");
-            cellA37.setCellStyle(greyStyle);
-            
-        HSSFRow critAl = worksheet.createRow((short) 37);
-            HSSFCell cellA38= critAl.createCell((short) 0);
-            cellA38.setCellValue("Al");
-            cellA38.setCellStyle(greyStyle);
-            
-        HSSFRow critK = worksheet.createRow((short) 38);
-            HSSFCell cellA39= critK.createCell((short) 0);
-            cellA39.setCellValue("K");
-            cellA39.setCellStyle(greyStyle);
-            
-        HSSFRow critCa = worksheet.createRow((short) 39);
-            HSSFCell cellA40= critCa.createCell((short) 0);
-            cellA40.setCellValue("Ca");
-            cellA40.setCellStyle(greyStyle);
-            
-        HSSFRow critCr = worksheet.createRow((short) 40);
-            HSSFCell cellA41= critCr.createCell((short) 0);
-            cellA41.setCellValue("Cr");
-            cellA41.setCellStyle(greyStyle);
-            
-        HSSFRow critMn = worksheet.createRow((short) 41);
-            HSSFCell cellA42= critMn.createCell((short) 0);
-            cellA42.setCellValue("Mn");
-            cellA42.setCellStyle(greyStyle);
-            
-        HSSFRow critFe = worksheet.createRow((short) 42);
-            HSSFCell cellA43= critFe.createCell((short) 0);
-            cellA43.setCellValue("Fe");
-            cellA43.setCellStyle(greyStyle);
-            
-        HSSFRow critNi = worksheet.createRow((short) 43);
-            HSSFCell cellA44= critNi.createCell((short) 0);
-            cellA44.setCellValue("Ni");
-            cellA44.setCellStyle(greyStyle);
-            
-        HSSFRow critCu = worksheet.createRow((short) 44);
-            HSSFCell cellA45= critCu.createCell((short) 0);
-            cellA45.setCellValue("Cu");
-            cellA45.setCellStyle(greyStyle);
-            
-        HSSFRow critTot = worksheet.createRow((short) 45);
-            HSSFCell cellA46= critTot.createCell((short) 0);
-            cellA46.setCellValue("Total: ");
-            cellA46.setCellStyle(greyStyle);
-            
-            workbook.write(ions);
-            ions.flush();
-        
-        }
-        
-            templatePath = template.getAbsolutePath();
-             convert(templatePath, size, selectedFiles); //calls a function located in the gui... Booo
-           } catch (IOException ex) {
-        Logger.getLogger(PDFtoText.class.getName()).log(Level.SEVERE, null, ex);
-    }
-    }
-}   
 
-public static void addToExcel(List list, List Ion, String material, String lotNum, int size, String templatePath) throws FileNotFoundException, IOException{  
+
+public static void addToExcel(List list, List Ion, String material, String lotNum, String templatePath) throws FileNotFoundException, IOException{  
     System.out.println("***************************************************");
     System.out.println("Starting AddToExcel");
     System.out.println("***************************************************");
@@ -908,7 +967,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             //Green Bolded cell  style
             HSSFCellStyle greenStyleBold = workbook.createCellStyle();
                 greenStyleBold.setFont(fontBold);
-                greenStyleBold.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+                greenStyleBold.setFillForegroundColor(IndexedColors.LIME.getIndex());
                 greenStyleBold.setFillPattern(CellStyle.SOLID_FOREGROUND);
                 greenStyleBold.setAlignment(ALIGN_CENTER);
                 greenStyleBold.setBorderBottom(HSSFCellStyle.BORDER_THIN);
@@ -920,7 +979,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             //Green cell style
             HSSFCellStyle greenStyle = workbook.createCellStyle();
                
-                greenStyle.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+                greenStyle.setFillForegroundColor(IndexedColors.LIME.getIndex());
                 greenStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
                 greenStyle.setAlignment(ALIGN_CENTER);
                 greenStyle.setBorderBottom(HSSFCellStyle.BORDER_THIN);
@@ -931,7 +990,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 //Blue Bold cell style
             HSSFCellStyle blueStyleBold = workbook.createCellStyle();
                 blueStyleBold.setFont(fontBold);
-                blueStyleBold.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+                blueStyleBold.setFillForegroundColor(IndexedColors.AQUA.getIndex());
                 blueStyleBold.setFillPattern(CellStyle.SOLID_FOREGROUND);
                 blueStyleBold.setAlignment(ALIGN_CENTER);
                 blueStyleBold.setBorderBottom(HSSFCellStyle.BORDER_THIN);
@@ -941,7 +1000,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 //Blue cell style
             HSSFCellStyle blueStyle = workbook.createCellStyle();
-                blueStyle.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+                blueStyle.setFillForegroundColor(IndexedColors.AQUA.getIndex());
                 blueStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
                 blueStyle.setAlignment(ALIGN_CENTER);
                 blueStyle.setBorderBottom(HSSFCellStyle.BORDER_THIN);
@@ -1056,7 +1115,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 HSSFCell cellA31= row31.getCell((short) 0); 
                 
             HSSFRow row32 = worksheet.getRow((short) 31);
-                HSSFCell cellA32= row31.getCell((short) 0); 
+                HSSFCell cellA32= row32.getCell((short) 0); 
                 
                 System.out.println("Now starting Crit Ions");
                 
@@ -1849,19 +1908,19 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             
             
     }
-    public static void copy(String sourcePath, String destinationPath) throws IOException {
+public static void copy(String sourcePath, String destinationPath) throws IOException {
         
         Files.copy(Paths.get(sourcePath), new FileOutputStream(destinationPath)); //saves to unique output file
         System.out.println("Your spreadsheet is located at: " + destinationPath);
          System.out.println("****************COMPLETE****************");
          
-       // Desktop.getDesktop().open(new File(destinationPath)); //opens completed file
+       Desktop.getDesktop().open(new File(destinationPath)); //opens completed file
          
        clean();
          
     } 
     
-    public static void clean(){
+public static void clean(){
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {

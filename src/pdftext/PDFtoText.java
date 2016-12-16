@@ -1,7 +1,7 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Made by Patric Luebbert 2016
+ * Specifically designed for ICP-MS PDF files generated in Brewer Science
+ * 
  */
 package pdftext;
 
@@ -32,8 +32,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
@@ -55,20 +53,9 @@ import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.util.CellUtil;
 import java.lang.Runtime;
 import java.util.Collections;
-import javafx.beans.value.ChangeListener;
-import javafx.event.EventType;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.Tooltip;
-import javafx.scene.input.ClipboardContent;
-import javafx.scene.input.Dragboard;
-import static javafx.scene.input.KeyCode.T;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.TransferMode;
-import javax.swing.SortOrder;
-import static org.apache.poi.hssf.usermodel.HeaderFooter.file;
 import org.apache.poi.ss.usermodel.CellStyle;
 import static org.apache.poi.ss.usermodel.CellStyle.ALIGN_CENTER;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -81,7 +68,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
     //Global Variables
      Button okBtn;
      Button selectBtn;
-     Button closeBtn;
+     Button deleteBtn;
      Button clearBtn;
      Button moveUp;
      Button moveDown;
@@ -91,6 +78,8 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
      static String destinationPath;
      static String fPath;
      static int size; 
+     int selectedIndex;
+     
      
      static boolean isEmpty;
      
@@ -102,12 +91,12 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
      ListView<String> listViewStrings;
      static List<String> sortedStrings;
      
-     static List<File >selectedFiles;
+     static List<File >selectedFiles = null;
      List<File> tmpList;
      List<String> tmpString;
      Stage savedStage;
      
-     String selectedString;
+     
      
      static File tmp;
      static File output;
@@ -148,23 +137,25 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
          
                 //Visuals
         Label lbl = new Label("File Name:");
+        Label author = new Label("Made by Patric Luebbert");
+        
         field = new TextField();
-        listView = new ListView<File>();
         listViewStrings = new ListView<String>();
+       
         
-        
-        okBtn = new Button("OK");
+        okBtn = new Button("Run");
         selectBtn = new Button("Select PDF's");
-        closeBtn = new Button("Close");
+        deleteBtn = new Button("Delete");
         clearBtn = new Button("Clear");
-        moveUp = new Button ("Up");
-        moveDown = new Button ("Down");
+        moveUp = new Button ("Move Up");
+        moveDown = new Button ("Move Down");
+                
         
                 //Actions
         okBtn.setOnAction(this);   
         selectBtn.setOnAction(this);
         //closeBtn.setOnAction(this);
-        //lcearBtn.setOnAction(this);
+        deleteBtn.setOnAction(this);
         moveUp.setOnAction(this);
         moveDown.setOnAction(this);
         
@@ -175,23 +166,28 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
         okBtn.setTooltip(new Tooltip("Click to run"));
         selectBtn.setTooltip(new Tooltip("Select all of the PDF files you want in excel"));
         listViewStrings.setTooltip(new Tooltip("List of all selected files"));
+        moveUp.setTooltip(new Tooltip("Move's selected file up the list"));
+        moveDown.setTooltip(new Tooltip("Move's selected file down the list"));
         
         GridPane.setHalignment(okBtn, HPos.RIGHT);
 
         root.add(lbl, 0, 0);
+        root.add(author, 2, 5);
         root.add(field, 1, 0, 3, 1);
-        //root.add(listView, 0, 1, 4, 2);
+        
         
         root.add(listViewStrings, 0,1,4,2);
+        
         
         root.add(okBtn, 3, 3);
         //root.add(closeBtn, 3, 3);
         root.add(selectBtn, 2, 3);
-      //  root.add(clearBtn, 0, 3);
+        root.add(deleteBtn, 0, 5);
         root.add(moveUp, 0,3);
-        root.add(moveDown, 1,3);
+        root.add(moveDown, 0,4);
         
-        Scene scene = new Scene(root, 280, 300);
+        Scene scene = new Scene(root, 325, 300);
+        
 
         stage.setTitle("ICP-MS PDF to Excel");
         stage.setScene(scene);
@@ -216,6 +212,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
      //Select PDF's Button   
         if(event.getSource()==selectBtn) {
             System.out.println("SelectBtn");
+           
             try {
                 FileChooser();
             } catch (FileNotFoundException ex) {
@@ -225,23 +222,44 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
             }
             
         }
-     //Close button (Not implemented)   
-        if(event.getSource()==closeBtn) {
-            System.out.println("Close");
+     //Delete button   
+        if(event.getSource()==deleteBtn) {
+            System.out.println("Delete");
+            
+            selectedIndex = listViewStrings.getSelectionModel().getSelectedIndex();
+            listViewStrings.getSelectionModel().clearSelection();
+            selStrings.remove(selectedIndex);
+            refreshListView();
         }
+        
      //Move selected Up   
         if(event.getSource()==moveUp){
             System.out.println("Move up");
-            
-            
+            selectedIndex = listViewStrings.getSelectionModel().getSelectedIndex();
+            if(selectedIndex == 0) {
+                System.out.println("Already at top of list");
+            }
+            else
+            {
+                moveUp(selectedIndex);
+            }
         }
      //Move selected down    
         if(event.getSource()==moveDown){
             System.out.println("Move Down");
+            selectedIndex = listViewStrings.getSelectionModel().getSelectedIndex();
+            if(selectedIndex == selStrings.size()) {
+                System.out.println("Already at bottom of list");
+            }
+            else
+            {
+                moveDown(selectedIndex);
+            }
+            
         }
      
     }
-    
+    static List<String> selStrings = new ArrayList();
     private List<String> FileChooser() throws FileNotFoundException, IOException {
         
         FileChooser fileChooser = new FileChooser();
@@ -250,33 +268,74 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
         fileChooser.getExtensionFilters().addAll(
                 new ExtensionFilter("PDF Files", "*.pdf"));
         selectedFiles = fileChooser.showOpenMultipleDialog(savedStage); //saves all selected files in a file list
-        List<String> selStrings = new ArrayList();
+        
         
         for (int i = 0; i<selectedFiles.size();i++){
             String tempFilePath = selectedFiles.get(i).getAbsolutePath();
              System.out.println(tempFilePath);
              selStrings.add(tempFilePath);
             }
+       
         
-        
-        toListView(selStrings);
+        selectedFiles = null;
+        sortListView(selStrings);
  
       return selStrings;
     }   
 
-    private void toListView(List<String> selStrings){
-      Collections.sort(selStrings);
-    
+    private void sortListView(List<String> selStrings){
+      Collections.sort(selStrings); //sorts alphebetically 
+      refreshListView();
+    }
+    private void refreshListView(){
+        
+        listViewStrings.getItems().clear();
+        
       for(int i=0; i<selStrings.size(); i++){
              listViewStrings.getItems().add(selStrings.get(i));  
           }
         
     }   
-    
+    private void moveUp(int selectedIndex){
+        /*
+        get selectedIndex - 1
+        get selectedString
+        get selectedString -1
+        save selectedString to tempstring
+        move selectedString -1 to selectedString index
+        put tempString at selected string -1 index
+        refresh selStrings
+        refresh listViewStrings
+        */
+        int replaceIndex = selectedIndex - 1;
+        String selectedString = selStrings.get(selectedIndex);
+        String swapString = selStrings.get(replaceIndex);
+            String tempStringA = selectedString;
+            String tempStringB = swapString;
+        selStrings.remove(selectedIndex);
+        selStrings.add(selectedIndex, tempStringB);
+        selStrings.remove(replaceIndex);
+        selStrings.add(replaceIndex, tempStringA );
+        refreshListView();
+        listViewStrings.getSelectionModel().select(selectedIndex - 1);
+    }
+    private void moveDown(int selectedIndex){
+       int replaceIndex = selectedIndex + 1;
+        String selectedString = selStrings.get(selectedIndex);
+        String swapString = selStrings.get(replaceIndex);
+            String tempStringA = selectedString;
+            String tempStringB = swapString;
+        selStrings.remove(selectedIndex);
+        selStrings.add(selectedIndex, tempStringB);
+        selStrings.remove(replaceIndex);
+        selStrings.add(replaceIndex, tempStringA );
+        refreshListView(); 
+        listViewStrings.getSelectionModel().select(selectedIndex + 1);
+    }
     
  public void runTemplateCreator() {
-     if (selectedFiles !=null){
-         size = selectedFiles.size();
+     if (selStrings !=null){
+         size = selStrings.size();
          
          excelTemplate();
    
@@ -650,16 +709,6 @@ public static void excelTemplate(){
 }  
 public static void convert(String templatePath){
          
-        List<String> selStrings = new ArrayList();
-        
-        for (int i = 0; i<selectedFiles.size();i++){
-            String tempFilePath = selectedFiles.get(i).getAbsolutePath();
-             System.out.println(tempFilePath);
-             selStrings.add(tempFilePath);
-            }
-        
-        Collections.sort(selStrings); //sorts alphabetically 
-        
          for(int i = 0; i < selStrings.size(); i++){
              fPath = selStrings.get(i);
              System.out.println("LOOK AT ME " + fPath);

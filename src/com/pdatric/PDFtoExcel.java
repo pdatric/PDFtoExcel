@@ -141,7 +141,7 @@ public class PDFtoExcel extends Application {
             //shortening up the listview path, need to update list view using this then add a button to increase or decrease the size of path
             for (int i= 0; i < selStrings.size(); i++) {
                 String tempFilePath = selStrings.get(i);
-                if(tempFilePath.contains("/")){
+               if(tempFilePath.contains("/")){
                 String result[] = tempFilePath.split("/");
                 String slash = "/"; 
                 String shortFilePath = result[result.length - 3] + slash + result[result.length - 2] + slash + result[result.length - 1];

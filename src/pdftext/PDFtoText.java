@@ -54,15 +54,19 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import java.lang.Runtime;
+import java.util.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
 import org.apache.poi.ss.usermodel.CellStyle;
 import static org.apache.poi.ss.usermodel.CellStyle.ALIGN_CENTER;
 import org.apache.poi.ss.usermodel.IndexedColors;
 
 /**
  *
- * @author pluebbert
+ * @author pluebberwt
  */
 public class PDFtoText extends Application implements EventHandler<ActionEvent> {
     //Global Variables
@@ -70,7 +74,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
      Button selectBtn;
      Button deleteBtn;
      Button clearBtn;
-     Button moveUp;
+     Button moveUp; 
      Button moveDown;
      
      static TextField field;
@@ -79,7 +83,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
      static String fPath;
      static int size; 
      int selectedIndex;
-     
+     static int totStrings;
      
      static boolean isEmpty;
      
@@ -188,30 +192,35 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
         
         Scene scene = new Scene(root, 325, 300);
         
-
+        stage.getIcons().add(new Image("Icon.png"));
         stage.setTitle("ICP-MS PDF to Excel");
         stage.setScene(scene);
         stage.show();
+        
         
         savedStage = stage;
     }
     
     @Override
-    public void handle(ActionEvent event) {
+    public void handle(ActionEvent event) { //Handles for all button presses
      //OK button   
         if(event.getSource()==okBtn) {
             System.out.println("OK");
             
-            if(field.getText().isEmpty()){
-                isEmpty = true;
+            if(field.getText().isEmpty()){  //checks if user inputed a desired output file name
+                isEmpty = true;             // if false uses default name
             }
-            outputName = field.getText();
-            runTemplateCreator();
+            outputName = field.getText();  // if desired output file name exists, use it
+            try {
+                runTemplateCreator();
+            } catch (IOException ex) {
+                Logger.getLogger(PDFtoText.class.getName()).log(Level.SEVERE, null, ex);
+            }
             
         }
      //Select PDF's Button   
         if(event.getSource()==selectBtn) {
-            System.out.println("SelectBtn");
+            System.out.println("SelectBtn"); //Press to select all ICP-MS PDF files you want to analyze
            
             try {
                 FileChooser();
@@ -223,7 +232,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
             
         }
      //Delete button   
-        if(event.getSource()==deleteBtn) {
+        if(event.getSource()==deleteBtn) { //deletes file from list and updates listView to reflect new list
             System.out.println("Delete");
             
             selectedIndex = listViewStrings.getSelectionModel().getSelectedIndex();
@@ -233,7 +242,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
         }
         
      //Move selected Up   
-        if(event.getSource()==moveUp){
+        if(event.getSource()==moveUp){ //moves selected file up in the list, top of the list = first column in excel
             System.out.println("Move up");
             selectedIndex = listViewStrings.getSelectionModel().getSelectedIndex();
             if(selectedIndex == 0) {
@@ -245,7 +254,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
             }
         }
      //Move selected down    
-        if(event.getSource()==moveDown){
+        if(event.getSource()==moveDown){ //moves selected file down the list
             System.out.println("Move Down");
             selectedIndex = listViewStrings.getSelectionModel().getSelectedIndex();
             if(selectedIndex == selStrings.size()) {
@@ -260,7 +269,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
      
     }
     static List<String> selStrings = new ArrayList();
-    private List<String> FileChooser() throws FileNotFoundException, IOException {
+    private List<String> FileChooser() throws FileNotFoundException, IOException { //opens file directory to find and select PDF Files
         
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Select PDF Files");
@@ -270,24 +279,31 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
         selectedFiles = fileChooser.showOpenMultipleDialog(savedStage); //saves all selected files in a file list
         
         
-        for (int i = 0; i<selectedFiles.size();i++){
+        for (int i = 0; i<selectedFiles.size();i++){  // gets all of the path's to selected files and saves them as a string
             String tempFilePath = selectedFiles.get(i).getAbsolutePath();
              System.out.println(tempFilePath);
              selStrings.add(tempFilePath);
             }
-       
         
-        selectedFiles = null;
+        //shortening up the listview path, need to update list view using this then add a button to increase or decrease the size of path
+        for (int i = 0; i<selectedFiles.size(); i++){
+            String tempFilePath = selStrings.get(i);
+            String result[] =tempFilePath.split("/"); 
+            String shortFilePath =result[result.length-3] +"/" + result[result.length - 2] + "/" + result[result.length-1];
+            System.out.println(shortFilePath);
+        }
+        
+        selectedFiles = null; //forgets selected files so more can be selected and added to the list if needed
         sortListView(selStrings);
  
       return selStrings;
     }   
 
     private void sortListView(List<String> selStrings){
-      Collections.sort(selStrings); //sorts alphebetically 
+      Collections.sort(selStrings); //sorts alphebetically for initial view in listview
       refreshListView();
     }
-    private void refreshListView(){
+    private void refreshListView(){ //updates list view to show any changes(Move up, move down, delete)
         
         listViewStrings.getItems().clear();
         
@@ -333,7 +349,7 @@ public class PDFtoText extends Application implements EventHandler<ActionEvent> 
         listViewStrings.getSelectionModel().select(selectedIndex + 1);
     }
     
- public void runTemplateCreator() {
+ public void runTemplateCreator() throws IOException {
      if (selStrings !=null){
          size = selStrings.size();
          
@@ -360,7 +376,7 @@ public static int selectedFileSize = 0;
 public static int n = 1;
 public static String [] alphabet = {"A", "B", "C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z"};
 
-public static void excelTemplate(){   
+public static void excelTemplate() throws IOException{   //creates my excel template that will be filled with the ICP-MS Ions data
     tmp = new File("Template_Ions.xls");
     boolean exists = tmp.exists();
     
@@ -400,7 +416,7 @@ public static void excelTemplate(){
                 greyStyle.setBorderTop(HSSFCellStyle.BORDER_THIN);
                 greyStyle.setBorderLeft(HSSFCellStyle.BORDER_THIN);
                 greyStyle.setBorderRight(HSSFCellStyle.BORDER_THIN);
-            
+            //grey Bold style (for critical Ions)
             HSSFCellStyle greyStyleBold = workbook.createCellStyle();
                 greyStyleBold.setFont(fontBold);
                 greyStyleBold.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
@@ -431,7 +447,7 @@ public static void excelTemplate(){
                 }
                 
                 
-           System.out.println("Text String: ");
+           System.out.println("Text String: "); //Could add customizable Excels by user inputting template names for String[] text
            String[] text = {"Name: ", "Lot #: ", "Stage: ", "Analyte: ", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr","Mn","Fe","Co","Ni","Cu","Ga","Zr","Mo","Ru","Cd","In","Sn","Li","Zn","Sb","W","Pb", "row30","row31","10 Critical Ions","Lot: ","Conc: ","Na","Mg","Al","K","Ca","Cr","Mn","Fe","Ni","Cu","Total: "};
             for(int i = 0; i < nameString.length; i ++) {
             System.out.print(text[i]+", " );
@@ -443,22 +459,11 @@ public static void excelTemplate(){
                 
                 System.out.println("woo");
           
-      /*  for (int i = 0; i < text.length; i ++){
-            HSSFRow row = worksheet.createRow((short) i);
-            HSSFCell cell = row.createCell((short) 0);
-                
-                    cell.setCellValue(text[i]);  
-            }
-            for (int i = text.length; i < text.length + 5; i++){
-                HSSFRow row = worksheet.createRow((short) i);
-                HSSFCell cell = row.createCell((short) 0);
-            }*/
-                
-               
-       HSSFRow name = worksheet.createRow((short) 0);
-            HSSFCell cellA1 = name.createCell((short) 0);
-            cellA1.setCellValue("Name: ");
-            cellA1.setCellStyle(greyStyleBold);
+      
+       HSSFRow name = worksheet.createRow((short) 0);   //creates row 1
+            HSSFCell cellA1 = name.createCell((short) 0); // creates cell A1
+            cellA1.setCellValue("Name: ");   //sets value of cell
+            cellA1.setCellStyle(greyStyleBold); //sets cell style(bold for either header or critical ion)
             
             
           
@@ -707,13 +712,15 @@ public static void excelTemplate(){
     }
     }
 }  
-public static void convert(String templatePath){
-         
-         for(int i = 0; i < selStrings.size(); i++){
+public static void convert(String templatePath) throws IOException{ //runs program on order that the PDF's are listed in listview
+         totStrings = 0;                                        //this allows excel to be filled in the desired order
+         for(int i = 0; i < size; i++){
              fPath = selStrings.get(i);
              System.out.println("LOOK AT ME " + fPath);
              pdfTotxt(fPath, templatePath);
+             totStrings++;
         }
+         open();
  }
 public static void pdfTotxt(String fPath, String templatePath) {
     
@@ -730,13 +737,13 @@ public static void pdfTotxt(String fPath, String templatePath) {
             pd = PDDocument.load(input);
             System.out.println(pd.getNumberOfPages());
             System.out.println(pd.isEncrypted());
-            pd.save("IonsCopy.pdf"); // Creates a copy called "CopyOfInvoice.pdf"
+            pd.save("IonsCopy.pdf"); // Creates a copy of pdf
             PDFTextStripper stripper = new PDFTextStripper();
             
             
             
             wr = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(output)));
-            stripper.writeText(pd, wr);
+            stripper.writeText(pd, wr); //strips all text from PDF document and wrights it to the Buffered Writer
             if (pd != null) {
                 pd.close();
             }
@@ -752,21 +759,17 @@ public static void pdfTotxt(String fPath, String templatePath) {
 public static void txtToCsv( String templatePath) throws FileNotFoundException, IOException{
      FileWriter writer = null;
       
-        File file = new File("C:\\PDFTester\\output.txt");
+        File file = new File("C:\\PDFTester\\output.txt"); //grabs text file from before
         Scanner scan = new Scanner(file);
-        csvFile = new File("C:\\PDFTester\\CSV.csv");
+        csvFile = new File("C:\\PDFTester\\CSV.csv");  //creates new CSV file
         file.createNewFile();
         
         writer = new FileWriter(csvFile);
                 
         while (scan.hasNext()) {
               
-           String csv = scan.nextLine().replace(" ", ",");
-             /**if( csv.length() < 15) {
-                writer.append(" ** ");
-                scan.reset();
-                continue;
-            }**/
+           String csv = scan.nextLine().replace(" ", ","); //scans through text file, replaces all spaces with commas
+            
             System.out.println(csv);
             System.out.println("Length: " + csv.length());
             writer.append(csv);
@@ -779,7 +782,7 @@ public static void txtToCsv( String templatePath) throws FileNotFoundException, 
 
 public static void getData( String templatePath) throws FileNotFoundException, IOException{
     System.out.println("******************************");
-    String stage = null;
+    String stage = null;    //initializing all strings needed below
     String a = null;
     String Be= null;
     String Na= null;
@@ -811,195 +814,216 @@ public static void getData( String templatePath) throws FileNotFoundException, I
     String analyte = null;
     String lot = null;
     
-    List<String> list = new ArrayList<String>();
+    List<String> concentration = new ArrayList<String>();
     List<String> Ion = new ArrayList<String>();
     
-    FileResource csv = new FileResource ("C:\\PDFTester\\CSV.csv");
+    FileResource csv = new FileResource ("C:\\PDFTester\\CSV.csv"); //grabs previously created CSV file
     CSVParser parser = csv.getCSVParser(false);
-    for (CSVRecord record : parser) {
-        
-        a = record.get(0);
-        if (a.contains("Material:")){
+    for (CSVRecord record : parser) { //Scans CSV
+             
+        a = record.get(0); //scans first column of CSV
+        if (a.contains("Material:")){ //if desired word is in first column of CSV
            System.out.println(a + " " + record.get(1));
-           material = record.get(1); 
-           Ion.add(record.get(0));
-           list.add(material);
+           material = record.get(1); //get the item in the next column over on the same row
+           Ion.add(record.get(0));  //get the desired word
+           concentration.add(material);   // adds item to list
          }
         
         if (a.contains("Lot")) {
             System.out.println(a + "" + record.get(2));
-            lot = record.get(2);
-            list.add(lot);
-            Ion.add(record.get(0));
+            
             lotNum = record.get(2);
+            do{
+                int x = 2;
+                boolean hasNext = false;
+            if(record.get(x+1).isEmpty()){
+                hasNext = true; 
+                break;
+                }
+            else {
+                x++;
+                lot = lotNum + " " + record.get(x);
+                lotNum = lot;
+            }
+            }while(false);
+            concentration.add(lotNum);
+            Ion.add(record.get(0));
+            
         }
         if (a.contains("Stage")) {
             System.out.println(a + "" + record.get(2));
-            stage = record.get(2);
-            list.add(stage);
+            stage = record.get(1);
+            concentration.add(stage);
             Ion.add(record.get(0));
         }
         if (a.contains("Analyte")) {
             System.out.println(a + "" + record.get(6));
             analyte = record.get(6);
-            list.add(analyte);
+            concentration.add(analyte);
             Ion.add(record.get(0));
         }
         
         if(a.contains("Be") && a.length() <= 3){ //if the Ion is what I'm looking for
             Be = record.get(3);                  //and its only 2 chars long
-            list.add(Be);                        //add the resulting conc to list 
+            concentration.add(Be);                        //add the resulting conc to list 
             Ion.add(record.get(0));              //add the ion name to Ion
         }
                 
         if( a.contains("Na") && a.length() <= 3) {
             Na = record.get(3);
-            list.add(Na);
+            concentration.add(Na);
             Ion.add(record.get(0));
         }
         if (a.contains("Mg") && a.length() <= 3){
             Mg = record.get(3);
-            list.add(Mg);
+            concentration.add(Mg);
             Ion.add(record.get(0));
         }
         if(a.contains("Al") && a.length() <= 3){
             Al = record.get(3);
-            list.add(Al);
+            concentration.add(Al);
             Ion.add(record.get(0));
         }
         if(a.contains("K") && a.length() <= 3) {
             K = record.get(3);
-            list.add(K);
+            concentration.add(K);
             Ion.add(record.get(0));
         }
         if(a.contains("Ca") && a.length() <= 3){ 
             Ca = record.get(3);
-            list.add(Ca);
+            concentration.add(Ca);
             Ion.add(record.get(0));
         }
         if(a.contains("Ti") && a.length() <= 3) {
             Ti = record.get(3);
-            list.add(Ti);
+            concentration.add(Ti);
             Ion.add(record.get(0));
         }
         if(a.contains("Cr") && a.length() <= 3) {
             Cr = record.get(3);
-            list.add(Cr);
+            concentration.add(Cr);
             Ion.add(record.get(0));
         }
         if(a.contains("Mn") && a.length() <= 3) {
            Mn = record.get(3);
-           list.add(Mn);
+           concentration.add(Mn);
             Ion.add(record.get(0));
         }
         if(a.contains("Fe") && a.length() <= 3) {
             Fe = record.get(3);
-            list.add(Fe);
+            concentration.add(Fe);
             Ion.add(record.get(0));
         }
         if(a.contains("Co") && a.length() <= 3){
             Co = record.get(3);
-            list.add(Co);
+            concentration.add(Co);
             Ion.add(record.get(0));
         }
         if(a.contains("Ni") && a.length() <= 3){
             Ni = record.get(3);
-            list.add(Ni);
+            concentration.add(Ni);
             Ion.add(record.get(0));
         }
         if(a.contains("Cu") && a.length() <= 3){
             Cu = record.get(3);
-            list.add(Cu);
+            concentration.add(Cu);
             Ion.add(record.get(0));
         }
         if(a.contains("Ga") && a.length() <= 3){
             Ga = record.get(3);
-            list.add(Ga);
+            concentration.add(Ga);
             Ion.add(record.get(0));
         }
         if(a.contains("Zr") && a.length() <= 3){
             Zr = record.get(3);
-            list.add(Zr);
+            concentration.add(Zr);
             Ion.add(record.get(0));
         }
         if(a.contains("Mo") && a.length() <= 3){
             Mo = record.get(3);
-            list.add(Mo);
+            concentration.add(Mo);
             Ion.add(record.get(0));
         }
         if(a.contains("Ru") && a.length() <= 3){
             Ru = record.get(3);
-            list.add(Ru);
+            concentration.add(Ru);
             Ion.add(record.get(0));
         }
         if(a.contains("Cd") && a.length() <= 3){
             Cd = record.get(3);
-            list.add(Cd);
+            concentration.add(Cd);
             Ion.add(record.get(0));
         }
         if(a.contains("In") && a.length() <= 3){
             In = record.get(3);
-            list.add(In);
+            concentration.add(In);
             Ion.add(record.get(0));
         }
         if(a.contains("Sn") && a.length() <= 3){
             Sn = record.get(3);
-            list.add(Sn);
+            concentration.add(Sn);
             Ion.add(record.get(0));
         }
         if(a.contains("Li") && a.length() <= 3){
             Li = record.get(3);
-            list.add(Li);
+            concentration.add(Li);
             Ion.add(record.get(0));
         }
         if(a.contains("Zn") && a.length() <= 3){
             Zn = record.get(3);
-            list.add(Zn);
+            concentration.add(Zn);
             Ion.add(record.get(0));
         }
         if(a.contains("Sb") && a.length() <= 3){
             Sb = record.get(3);
-            list.add(Sb);
+            concentration.add(Sb);
             Ion.add(record.get(0));
         }
         if(a.contains("W") && a.length() <= 3){
             W = record.get(3);
-            list.add(W);
+            concentration.add(W);
             Ion.add(record.get(0));
         }
         if(a.contains("Pb") && a.length() <= 3){
             Pb = record.get(3);
-            list.add(Pb);
+            concentration.add(Pb);
             Ion.add(record.get(0));
         }
     }
          
        
-       addToExcel(list, Ion, material, lotNum, templatePath);
+       addToExcel(concentration, Ion, material, templatePath);
 }  
 
 
-
-public static void addToExcel(List list, List Ion, String material, String lotNum, String templatePath) throws FileNotFoundException, IOException{  
-    System.out.println("***************************************************");
+//addToExcel method takes the parsed data and fills it into the template sheet created earlier
+public static void addToExcel(List concentration, List Ion, String material, String templatePath) throws FileNotFoundException, IOException{  
+    System.out.println("***************************************************"); 
     System.out.println("Starting AddToExcel");
     System.out.println("***************************************************");
-    String[] listString = (String[]) list.toArray(new String[0]); 
+    String[] listString = (String[]) concentration.toArray(new String[0]); //adds all previously grabbed names to list for parsing
     String[] ionString = (String[]) Ion.toArray(new String[0]);
-    System.out.println("List: " + list);
+    System.out.println("Concentration: " + concentration);
     System.out.println("Ions: " + Ion);
     
-    String nameLot = listString[1].substring(0, 7); 
+    System.out.println("Conc Size: " + concentration.size());
+    System.out.println("Ions: " + Ion.size());
     
-            FileInputStream template = new FileInputStream(new File(templatePath));
+    String nameLot = listString[1];
+    System.out.println(nameLot);
+    
+            FileInputStream template = new FileInputStream(new File(templatePath)); //gets template created earlier
             
             HSSFWorkbook workbook = new HSSFWorkbook(template);
             HSSFSheet worksheet = workbook.getSheetAt(0);
-            
-            Font fontBold = workbook.createFont();
-            fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
+       //Cell and Font Tyles     
+           Font fontBold = workbook.createFont();
+                 fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
             Font fontRed = workbook.createFont();
-            fontRed.setColor(HSSFColor.RED.index);
+                 fontRed.setColor(HSSFColor.RED.index);
+            Font fontBoldRed = workbook.createFont();
+                 fontBoldRed.setColor(HSSFColor.RED.index);
+                 fontBoldRed.setBoldweight(Font.BOLDWEIGHT_BOLD);
             
             //Grey Cell Style
             HSSFCellStyle greyStyle = workbook.createCellStyle();
@@ -1065,7 +1089,9 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
             int totalRowNum = worksheet.getPhysicalNumberOfRows() + 3;  
             System.out.println("Last row at: " + totalRowNum);
             
-            
+            /*gets all rows and cells from template excel sheet
+            Can't loop over these because the name of each row and cell 
+            variable change each time                                  */
             
             HSSFRow name = worksheet.getRow((short) 0);
                 HSSFCell cellA1 = name.getCell((short) 0);
@@ -1219,12 +1245,12 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
              
           
             
-
+        //fills data into excel template sheet
             for (int r = 0; r < size; r++){ // check each row
                if(n-1 == size){
                    break;
                }
-                   Row rw = worksheet.getRow(r);
+                   Row rw = worksheet.getRow(r); //gets each row
                
                System.out.println("Row Number: " + (r + 1));
                if(rw == null) {
@@ -1234,10 +1260,10 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                System.out.println("No Row errors: ");
                 for (int x = 0; x < totalRowNum; x++){ //check each cell
                     
-                     Cell c = rw.getCell(x);
+                     Cell c = rw.getCell(x); //gets each cell
                    
                     if(c == null){    //if cell is null, make it Blank
-                        c = rw.getCell(x, Row.CREATE_NULL_AS_BLANK);
+                        c = rw.getCell(x, Row.CREATE_NULL_AS_BLANK);//eliminates null pointers
                 System.out.println("Converting Null cells to Blank");
                     }
                     
@@ -1270,7 +1296,8 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 cellB4.setCellStyle(greyStyle);
                 i++;
             
-                
+                //this is repeated for 700 lines of code... cant loop again 
+                //because cell variable names change each time.
                 
                 HSSFCell cellB5 = Be.createCell((short) n);
                         //If value is positive, use value, else use 0
@@ -1278,7 +1305,8 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                     cellB5.setCellValue(Double.parseDouble(listString[i]));
                 }
                 else{
-                    cellB5.setCellValue(zero);
+                    cellB5.setCellValue(zero); //sets negative numbers to 0, 
+                                               //You cant have a negative concentration of Ions    
                 }
                         //Alternate colors for easier viewing
                 if(n%2==0){
@@ -1630,9 +1658,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 {
                     cellB22.setCellStyle(blueStyle);
                 }
-                
-                
-            
+
                 i++;
                 
                 HSSFCell cellB23 = In.createCell((short) n);
@@ -1789,7 +1815,7 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                 
                 HSSFCell cellB34 = critLot.createCell((short) n);
                 cellB34.setCellType(HSSFCell.CELL_TYPE_FORMULA);
-                String critLotVal =  (alphabet[n]+ "3"); 
+                String critLotVal =  (alphabet[n]+ "2"); 
                 cellB34.setCellFormula(critLotVal);
                 cellB34.setCellStyle(greyStyle);
                 
@@ -1938,16 +1964,17 @@ public static void addToExcel(List list, List Ion, String material, String lotNu
                       }
              
                 }
-     FileOutputStream fileOut = new FileOutputStream(templatePath);
+     FileOutputStream fileOut = new FileOutputStream(templatePath); //saves file
         workbook.write(fileOut);
         fileOut.flush();
         
             n++;
          if(isEmpty){ 
-         destinationPath = material + "_" + nameLot + "_Ions.xls";
+             
+         destinationPath = "Material_Ions.xls"; //default name
         }
          else{
-             destinationPath = outputName + ".xls";
+             destinationPath = outputName + ".xls"; //user specified name
          } 
             System.out.println("*************Template filled*************");
             System.out.println("Now renaming file for you");
@@ -1962,9 +1989,10 @@ public static void copy(String sourcePath, String destinationPath) throws IOExce
         Files.copy(Paths.get(sourcePath), new FileOutputStream(destinationPath)); //saves to unique output file
         System.out.println("Your spreadsheet is located at: " + destinationPath);
          System.out.println("****************COMPLETE****************");
-         
+}
+public static void open() throws IOException{
        Desktop.getDesktop().open(new File(destinationPath)); //opens completed file
-         
+                                              
        clean();
          
     } 

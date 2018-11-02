@@ -1,0 +1,1 @@
+java -Dapplication.defaultlaf=system -cp ../SX.jar DrawingSample

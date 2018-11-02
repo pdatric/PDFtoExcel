@@ -1,0 +1,44 @@
+Product Status: Pass/Fail/NA  
+Report Date/Time: Tuesday, August 08, 2017 15:57:11 
+Operator: Kevin  
+Brewer Science Inc.Rolla, MO  
+Quality Control  
+Doc.Control # F.6.4.5023  
+Effective Date: July29,2005  
+ICP-MS Analysis----Summary Report
+Testing Date/Time: Tuesday, August 08, 2017 15:52:58 
+Material: T-BOC 
+Lot Number: X14C006 
+Stage: R&D 
+Number of Replicates: 3 
+Initial Sample Quantity (mg): 110.0 
+Total Quantity of Sample and NMP (g): 15.6500 
+Method File: C:\Elandata\Method\qc26metals use per js.mth 
+Dataset File: C:\Elandata\DataSet\YEAR\2017\AUGUST\8-08-17\T-BOC.066 
+Result Report
+Analyte Mass Intensities Concentration Report Unit Conc. RSD
+Be 9 4.9 -40.74 ppb 28.588
+Na 23 10191.3 180.53 ppb 9.326
+Mg 24 98.7 46.01 ppb 15.842
+Al 27 29.8 -15.65 ppb 125.008
+K 39 34.0 -4.86 ppb 53.826
+Ca 40 757.4 334.33 ppb 45.016
+Ti 48 20.9 -15.33 ppb 116.558
+Cr 52 11.3 7.02 ppb 116.022
+Mn 55 8.4 -0.29 ppb 78.321
+Fe 56 124.7 25.93 ppb 50.177
+Co 59 5.1 8.57 ppb 6.812
+Ni 60 10.9 -1.07 ppb 537.001
+Cu 63 9.8 15.02 ppb 54.102
+Ga 69 130.7 -0.82 ppb 78.265
+Zr 90 4.2 -10.69 ppb 54.694
+Mo 95 5.6 4.98 ppb 74.911
+Ru 101 6.4 -8.86 ppb 4.463
+Cd 111 2.9 -0.41 ppb 308.229
+In 115 1.5 -11.13 ppb 0.047
+Sn 118 6.2 -12.54 ppb 6.139
+Li 7 12.4 6.80 ppb 57.057
+Zn 64 24.5 3.06 ppb 63.490
+Sb 121 5.3 -5.30 ppb 47.708
+W 184 1.3 13.49 ppb 0.026
+Pb 208 4.7 -13.74 ppb 0.489

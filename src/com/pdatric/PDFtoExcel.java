@@ -32,11 +32,14 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.util.CellRangeAddress;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.TesseractException;
+
 
 import java.awt.*;
-import java.awt.event.KeyAdapter;
+import java.awt.image.BufferedImage;
+
 import java.io.*;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -45,24 +48,33 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.Region;
 
 import static org.apache.poi.ss.usermodel.CellStyle.ALIGN_CENTER;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
+import org.apache.pdfbox.tools.imageio.ImageIOUtil;
 /**
  * @author pluebbert
  */
 public class PDFtoExcel extends Application {
-    private static TextField field;
+    private static TextField pathField;
     private static String outputName;
     private static int size;
-
+    private static ProgressBar pb = new ProgressBar(0);
+    
     private static boolean isEmpty;
 
     private ListView<String> listViewStrings;
-
-    private Stage savedStage;
+    private ListView<String> ionListView;
+    
+    
+    private static Stage savedStage;
 
     private static File tmp;
     private static File csvFile;
@@ -70,32 +82,40 @@ public class PDFtoExcel extends Application {
     private static String OStype; 
     private static String userName;
     private static File dir;
-   
+    
     
     
     private static String dirPath;
     private static String csvFilePath;
     private static String tmpPath;
     private static String IonsCopyPath;
-     
     
+    private static boolean isChecked = true;
+     
+    private static String sampleName; 
     private static List<String> selStrings = new ArrayList();
     private static List<String> shortStrings = new ArrayList();
+    private static List<String> sampleNames = new ArrayList();
+    
+    private static String[] ionNames = {"Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Ga", "Zr", "Mo", "Ru", "Cd", "In", "Sn", "Li", "Zn", "Sb", "W", "Pb"};
+    private static int ionNameSize = ionNames.length;                
     ////////////////////////////
     // Class Functions
     ////////////////////////////
 
     //Start the GUI
     @Override
+    
     public void start(Stage stage) {
-       // stage.getIcons().add(new Image("/Users/pluebbert/NetBeansProjects/PDFtoExcel-alex-revision/Icon"));
+       
+
         OStype = System.getProperty("os.name");
             System.out.println("OS Type: " + OStype);
         userName = System.getProperty("user.name");
             System.out.println("User Name: " + userName);
         
        String path = (File.listRoots()[0].toString() + System.getProperty("file.separator") + "Users" + System.getProperty("file.separator") + userName + System.getProperty("file.separator") + "Desktop"); 
-       
+
        String dirName = "Temp_Files"; 
         
         File file = new File(path);
@@ -133,56 +153,76 @@ public class PDFtoExcel extends Application {
         root.getRowConstraints().addAll(rcons1, rcons2);
 
         // Visuals
+       
         Label lbl = new Label("File Name:");
         Label author = new Label("Made by Patric Luebbert");
-
-        field = new TextField();
+        Label ionOrderLbl = new Label("Order of Ions");
         
-        listViewStrings = new ListView<>();
-
-        Button okBtn = new Button("Ok");
+        pathField = new TextField();
+        
+        listViewStrings = new ListView<>(); //for files to process
+        ionListView = new ListView<>();
+        
+        ListView<String> listViewTool = new ListView<>();
+        
+        CheckBox instrumentCheckBox = new CheckBox("Check for 7900" + "\n" + "Unchecked for old PDF's");
+        
+        Button okBtn = new Button("Run");
         Button selectBtn = new Button("Select");
         Button deleteBtn = new Button("Delete");
         Button clearBtn = new Button("Clear");
         Button moveUp = new Button("Move Up");
-        Button moveDown = new Button("Move Up");  
-        
+        Button moveDown = new Button("Move Down");  
+        Button settingsBtn = new Button("Settings");
+        //Settings Buttons
+        Button setApply = new Button ("Apply");
+        Button setCancel = new Button ("Cancel");
         
         // Actions
         okBtn.setOnAction(e -> {
+
             //OK button
             System.out.println("OK");
-            outputName = field.getText();  // if desired output file name exists, use it
+                    pb.setProgress(0);
+                    outputName = pathField.getText();  // if desired output file name exists, use it
+
+                    if (pathField.getText().isEmpty()) {  //checks if user inputed a desired output file name
+                        isEmpty = true;             // if true uses default name
+
+                    }
+
+
+                    if(outputName.contains("/")|| outputName.contains("\\")) {
+                        System.out.println("output name cannot contain a slash");
+
+
+                        Alert alert = new Alert(AlertType.ERROR, "File Output name CANNOT contain slashes");
+                        alert.setTitle("File Naming error");
+                        alert.setHeaderText("File Naming Error");
+                        alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
+                        alert.show();
+
+                        pathField.getText().replaceAll("\\","_");
+                        pathField.getText().replaceAll("/","_");
+
+
+                        isEmpty = true;
+
+                    }
+
+                    // Run Excel Template Creator
+                    if (selStrings != null) {
+                        
+                        try {
+                            size = selStrings.size();
+                            
+                                excelTemplate();
+                            
+                        } catch (IOException ex) {
+                            Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                    }
             
-            if (field.getText().isEmpty()) {  //checks if user inputed a desired output file name
-                isEmpty = true;             // if true uses default name
-                           
-            }
-            
-            
-            if(outputName.contains("/")|| outputName.contains("\\")) {
-                System.out.println("output name cannot contain a slash");
-                
-                
-                Alert alert = new Alert(AlertType.ERROR, "File Output name CANNOT contain slashes");
-                alert.setTitle("File Naming error");
-                alert.setHeaderText("File Naming Error");
-                alert.getDialogPane().setMinHeight(Region.USE_PREF_SIZE);
-                alert.show();
-                
-                field.getText().replaceAll("\\","_");
-                field.getText().replaceAll("/","_");
-               
-                
-                isEmpty = true;
-               
-            }
-            
-            // Run Excel Template Creator
-            if (selStrings != null) {
-                size = selStrings.size();
-                excelTemplate();
-            }
             
         });
 
@@ -207,7 +247,9 @@ public class PDFtoExcel extends Application {
                 System.out.println(tempFilePath);
                 selStrings.add(tempFilePath);
                 
+            
             }
+            
            }
            else{
                secondarySelecteFile();
@@ -215,6 +257,8 @@ public class PDFtoExcel extends Application {
 
             //shortening up the listview path, need to update list view using this then add a button to increase or decrease the size of path
             System.out.println("Selected String Size: " + selStrings.size());
+            System.out.println("n: " + n + "  size: " + selStrings.size());
+            System.out.println("n / size = " +(double)((1.0/(double)selStrings.size())*10));
             for (int i= 0; i < selStrings.size(); i++) {
                 String tempFilePath = selStrings.get(i);
                if(OStype.contains("Mac")){
@@ -231,6 +275,7 @@ public class PDFtoExcel extends Application {
             
             Collections.sort(selStrings);
             Collections.sort(shortStrings);//sorts alphabetically for initial view in listview
+            
             refreshListView();
         });
 
@@ -273,9 +318,36 @@ public class PDFtoExcel extends Application {
                 moveDown(selectedIndex);
             }
         });
-
+        
+        settingsBtn.setOnAction(e -> {
+            //Settings button
+            System.out.println("Settings");
+            try {
+            settingsPane();
+            } catch (IOException ex) {
+                Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex); 
+            
+            }
+        });
+        
+        instrumentCheckBox.setOnAction(e -> {
+            //check box
+            if(isChecked){
+                isChecked = false;
+                System.out.println("You've unchecked the box");
+            }
+            else{
+                isChecked = true;
+                System.out.println("You've checked the box");
+            }
+            
+        });
+        
+        
+                   
+        
         // Tooltips
-        field.setTooltip(new Tooltip("Type what you would like the resulting .xls to be named."
+        pathField.setTooltip(new Tooltip("Type what you would like the resulting .xls to be named."
                 + " If left blank, the name will be the name and lot# of the sample"));
         clearBtn.setTooltip(new Tooltip("Clears the program for a new workbook"));
         okBtn.setTooltip(new Tooltip("Click to run"));
@@ -285,22 +357,35 @@ public class PDFtoExcel extends Application {
         moveDown.setTooltip(new Tooltip("Move's selected file down the list"));
 
         GridPane.setHalignment(okBtn, HPos.RIGHT);
-
+                     
         root.add(lbl, 0, 0);
         root.add(author, 2, 5);
-        root.add(field, 1, 0, 3, 1);
-        root.add(listViewStrings, 0, 1, 4, 2);
-        root.add(okBtn, 3, 3);
+        root.add(pathField, 1, 0, 3, 1);
+        root.add(listViewStrings, 1, 1, 4, 2);
+        //root.add(listViewTool, 3, 0, 2, 1 ); //x, y, 
+        root.add(okBtn, 4, 3);
         root.add(selectBtn, 2, 3);
         root.add(deleteBtn, 0, 5);
         root.add(moveUp, 0, 3);
         root.add(moveDown, 0, 4);
-
+        root.add(pb, 3, 5);
+        root.add(instrumentCheckBox, 3,3);
+        instrumentCheckBox.setSelected(isChecked);
+        
+        
+       
         stage.setTitle("ICP-MS PerkinElmer PDF to Excel");
         stage.setScene(new Scene(root, 525, 300));
         stage.show();
 
         savedStage = stage;
+    }
+    
+    private static void updateProgressBar(int n){
+        pb.setProgress((double)n/(double)size);
+        System.out.println("n: " + n + " Size; " + size);
+        System.out.println(((double)n/(double)size) + "% done"); 
+        savedStage.show();
     }
     
     private void secondarySelecteFile() {
@@ -340,6 +425,7 @@ public class PDFtoExcel extends Application {
                    System.out.println("File Separator: "+ slash);
                    
                 String shortFilePath = result[result.length - 3] + slash + result[result.length - 2] + slash + result[result.length - 1];
+                sampleNames.add(result[result.length-1]);
                 shortStrings.add(shortFilePath);
                 System.out.println(shortFilePath);
                }
@@ -351,7 +437,19 @@ public class PDFtoExcel extends Application {
             }
     }
 
-    
+    private void settingsPane() throws IOException {
+        
+        FXMLLoader fxml = new FXMLLoader();
+        fxml.setLocation(getClass().getResource("SettingsWindow.fxml"));
+        Stage SetStage = new Stage();
+        Scene SetScene = new Scene(fxml.load());
+        SetStage.setScene(SetScene);
+        
+        System.out.println("Settings started");
+        
+        SetStage.setTitle("Settings");
+        SetStage.show();
+    }
     
     private void refreshListView() { //updates list view to show any changes(Move up, move down, delete)
         listViewStrings.getItems().clear();
@@ -436,353 +534,377 @@ public class PDFtoExcel extends Application {
     private static int n = 1;
     private static String[] alphabet = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA","AB","AC","AD","AE", "AF","AG","AH","AI","AJ","AK","AL","AM","AN","AO","AP","AQ","AR","AS","AT","AU","AV","AW","AX","AY","AZ","BA","BB","BC","BD","BE", "BF","BG","BH","BI","BJ","BK","BL","BM","BN","BO","BP","BQ","BR","BS","BT","BU","BV","BW","BX","BY","BZ", "CA","CB","CC","CD","CE", "CF","CG","CH","CI","CJ","CK","CL","CM","CN","CO","CP","CQ","CR","CS","CT","CU","CV","CW","CX","CY","CZ"};
 
-    private static void excelTemplate() {   //creates my excel template that will be filled with the ICP-MS Ions data
-        tmp = new File(dirPath + System.getProperty("file.separator") +"Template_Ions.xls");
-        tmpPath = tmp.getAbsolutePath();
-        boolean exists = tmp.exists();
-
-        if (exists) {
-            String templatePath = tmp.getAbsolutePath();
-            convert(templatePath);
-        } else {
-
-            System.out.println("***********************");
-            System.out.println("Creating Excel Template");
-            System.out.println("***********************");
-
-            String templatePath = null;
-            try {
-                File template = new File(dirPath + System.getProperty("file.separator") +"Template_Ions.xls"); //creates the template file
-                template.createNewFile();
-                try (FileOutputStream ions = new FileOutputStream(template, false)) {
-                    HSSFWorkbook workbook = new HSSFWorkbook();
-                    HSSFSheet worksheet = workbook.createSheet("Ions");
-
-                    Font fontBold = workbook.createFont();
-                    fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
-                    Font fontRed = workbook.createFont();
-                    fontRed.setColor(HSSFColor.RED.index);
-
-                    //Grey Cell Style
-                    HSSFCellStyle greyStyle = workbook.createCellStyle();
-
-                    greyStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-                    greyStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
-                    greyStyle.setAlignment(ALIGN_CENTER);
-                    greyStyle.setBorderBottom(HSSFCellStyle.BORDER_THIN);
-                    greyStyle.setBorderTop(HSSFCellStyle.BORDER_THIN);
-                    greyStyle.setBorderLeft(HSSFCellStyle.BORDER_THIN);
-                    greyStyle.setBorderRight(HSSFCellStyle.BORDER_THIN);
-                    
-                    //grey Bold style (for critical Ions)
-                    HSSFCellStyle greyStyleBold = workbook.createCellStyle();
-                    greyStyleBold.setFont(fontBold);
-                    greyStyleBold.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-                    greyStyleBold.setFillPattern(CellStyle.SOLID_FOREGROUND);
-                    greyStyleBold.setAlignment(ALIGN_CENTER);
-                    greyStyleBold.setBorderBottom(HSSFCellStyle.BORDER_THIN);
-                    greyStyleBold.setBorderTop(HSSFCellStyle.BORDER_THIN);
-                    greyStyleBold.setBorderLeft(HSSFCellStyle.BORDER_THIN);
-                    greyStyleBold.setBorderRight(HSSFCellStyle.BORDER_THIN);
-
-                    System.out.println("Populating common fields..... ");
-
-                    System.out.println(selectedFileSize);
-            /* rest of this method creates each row, then creates the first cell 
-               of the column and fills it with the ions template */
-                    String[] nameString = {"name", "lot", "stage", "conc", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Ga", "Zr", "Mo", "Ru", "Cd", "In", "Sn", "Li", "Zn", "Sb", "W", "Pb", "row30", "row31", "critHeader", "critLot", "critConc", "critNa", "critMg", "critAl", "critK", "critCa", "critCr", "critMn", "critFe", "critNi", "critCu", "critTot"};
-
-                    System.out.println("Name sting: ");
-                    for (String nameString1 : nameString) {
-                        System.out.print(nameString1 + ", ");
-                    }
-
-                    System.out.println("Cell String: ");
-                    String[] cells = new String[50];//cellA1-A46
-                    for (int i = 0; i < 46; i++) {
-                        cells[i] = "cellA" + (i + 1);
-                        System.out.print(cells[i] + ", ");
-                    }
-
-                    System.out.println("Text String: "); //Could add customizable Excels by user inputting template names for String[] text
-                    String[] text = {"Name: ", "Lot #: ", "Stage: ", "Analyte: ", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Ga", "Zr", "Mo", "Ru", "Cd", "In", "Sn", "Li", "Zn", "Sb", "W", "Pb", "row30", "row31", "10 Critical Ions", "Lot: ", "Conc: ", "Na", "Mg", "Al", "K", "Ca", "Cr", "Mn", "Fe", "Ni", "Cu", "Total: "};
-                    for (int i = 0; i < nameString.length; ++i) {
-                        System.out.print(text[i] + ", ");
-                    }
-                    System.out.println("**");
-
-                    System.out.println("Text list is " + text.length + " indexies long.");
-
-                   
-                    
-                    HSSFRow name = worksheet.createRow(0);   //creates row 1
-                    HSSFCell cellA1 = name.createCell(0); // creates cell A1
-                    cellA1.setCellValue("Name: ");   //sets value of cell
-                    cellA1.setCellStyle(greyStyleBold); //sets cell style(bold for either header or critical ion)
-
-                    HSSFRow lot = worksheet.createRow(1);
-                    HSSFCell cellA2 = lot.createCell(0);
-                    cellA2.setCellValue("Lot #: ");
-                    cellA2.setCellStyle(greyStyleBold);
-
-                    HSSFRow stage = worksheet.createRow(2);
-                    HSSFCell cellA3 = stage.createCell(0);
-                    cellA3.setCellValue("Stage: ");
-                    cellA3.setCellStyle(greyStyleBold);
-
-                    HSSFRow conc = worksheet.createRow(3);
-                    HSSFCell cellA4 = conc.createCell(0);
-                    cellA4.setCellValue("Analyte");
-                    cellA4.setCellStyle(greyStyleBold);
-
-                    HSSFRow Be = worksheet.createRow(4);
-                    HSSFCell cellA5 = Be.createCell(0);
-                    cellA5.setCellValue("Be");
-                    cellA5.setCellStyle(greyStyle);
-
-                    HSSFRow Na = worksheet.createRow(5);
-                    HSSFCell cellA6 = Na.createCell(0);
-                    cellA6.setCellValue("Na");
-                    cellA6.setCellStyle(greyStyleBold);
-
-                    HSSFRow Mg = worksheet.createRow(6);
-                    HSSFCell cellA7 = Mg.createCell(0);
-                    cellA7.setCellValue("Mg");
-                    cellA7.setCellStyle(greyStyleBold);
-
-                    HSSFRow Al = worksheet.createRow(7);
-                    HSSFCell cellA8 = Al.createCell(0);
-                    cellA8.setCellValue("Al");
-                    cellA8.setCellStyle(greyStyleBold);
-
-                    HSSFRow K = worksheet.createRow(8);
-                    HSSFCell cellA9 = K.createCell(0);
-                    cellA9.setCellValue("K");
-                    cellA9.setCellStyle(greyStyleBold);
-
-                    HSSFRow Ca = worksheet.createRow(9);
-                    HSSFCell cellA10 = Ca.createCell(0);
-                    cellA10.setCellValue("Ca");
-                    cellA10.setCellStyle(greyStyleBold);
-
-                    HSSFRow Ti = worksheet.createRow(10);
-                    HSSFCell cellA11 = Ti.createCell(0);
-                    cellA11.setCellValue("Ti");
-                    cellA11.setCellStyle(greyStyle);
-
-                    HSSFRow Cr = worksheet.createRow(11);
-                    HSSFCell cellA12 = Cr.createCell(0);
-                    cellA12.setCellValue("Cr");
-                    cellA12.setCellStyle(greyStyleBold);
-
-                    HSSFRow Mn = worksheet.createRow(12);
-                    HSSFCell cellA13 = Mn.createCell(0);
-                    cellA13.setCellValue("Mn");
-                    cellA13.setCellStyle(greyStyleBold);
-
-                    HSSFRow Fe = worksheet.createRow(13);
-                    HSSFCell cellA14 = Fe.createCell(0);
-                    cellA14.setCellValue("Fe");
-                    cellA14.setCellStyle(greyStyleBold);
-
-                    HSSFRow Co = worksheet.createRow(14);
-                    HSSFCell cellA15 = Co.createCell(0);
-                    cellA15.setCellValue("Co");
-                    cellA15.setCellStyle(greyStyle);
-
-                    HSSFRow Ni = worksheet.createRow(15);
-                    HSSFCell cellA16 = Ni.createCell(0);
-                    cellA16.setCellValue("Ni");
-                    cellA16.setCellStyle(greyStyleBold);
-
-                    HSSFRow Cu = worksheet.createRow(16);
-                    HSSFCell cellA17 = Cu.createCell(0);
-                    cellA17.setCellValue("Cu");
-                    cellA17.setCellStyle(greyStyleBold);
-
-                    HSSFRow Ga = worksheet.createRow(17);
-                    HSSFCell cellA18 = Ga.createCell(0);
-                    cellA18.setCellValue("Ga");
-                    cellA18.setCellStyle(greyStyle);
-
-                    HSSFRow Zr = worksheet.createRow(18);
-                    HSSFCell cellA19 = Zr.createCell(0);
-                    cellA19.setCellValue("Zr");
-                    cellA19.setCellStyle(greyStyle);
-
-                    HSSFRow Mo = worksheet.createRow(19);
-                    HSSFCell cellA20 = Mo.createCell(0);
-                    cellA20.setCellValue("Mo");
-                    cellA20.setCellStyle(greyStyle);
-
-                    HSSFRow Ru = worksheet.createRow(20);
-                    HSSFCell cellA21 = Ru.createCell(0);
-                    cellA21.setCellValue("Ru");
-                    cellA21.setCellStyle(greyStyle);
-
-                    HSSFRow Cd = worksheet.createRow(21);
-                    HSSFCell cellA22 = Cd.createCell(0);
-                    cellA22.setCellValue("Cd");
-                    cellA22.setCellStyle(greyStyle);
-
-                    HSSFRow In = worksheet.createRow(22);
-                    HSSFCell cellA23 = In.createCell(0);
-                    cellA23.setCellValue("In");
-                    cellA23.setCellStyle(greyStyle);
-
-                    HSSFRow Sn = worksheet.createRow(23);
-                    HSSFCell cellA24 = Sn.createCell(0);
-                    cellA24.setCellValue("Sn");
-                    cellA24.setCellStyle(greyStyle);
-
-                    HSSFRow Li = worksheet.createRow(24);
-                    HSSFCell cellA25 = Li.createCell(0);
-                    cellA25.setCellValue("Li");
-                    cellA25.setCellStyle(greyStyle);
-
-                    HSSFRow Zn = worksheet.createRow(25);
-                    HSSFCell cellA26 = Zn.createCell(0);
-                    cellA26.setCellValue("Zn");
-                    cellA26.setCellStyle(greyStyle);
-
-                    HSSFRow Sb = worksheet.createRow(26);
-                    HSSFCell cellA27 = Sb.createCell(0);
-                    cellA27.setCellValue("Sb");
-                    cellA27.setCellStyle(greyStyle);
-
-                    HSSFRow W = worksheet.createRow(27);
-                    HSSFCell cellA28 = W.createCell(0);
-                    cellA28.setCellValue("W");
-                    cellA28.setCellStyle(greyStyle);
-
-                    HSSFRow Pb = worksheet.createRow(28);
-                    HSSFCell cellA29 = Pb.createCell(0);
-                    cellA29.setCellValue("Pb");
-                    cellA29.setCellStyle(greyStyle);
-
-                    HSSFRow tot = worksheet.createRow(29);
-                    HSSFCell cellA30 = tot.createCell(0);
-                    cellA30.setCellValue("Total: ");
-                    cellA30.setCellStyle(greyStyle);
-
-                    HSSFRow row30 = worksheet.createRow(30);
-                    HSSFCell cellA31 = row30.createCell(0);
-
-                    HSSFRow row31 = worksheet.createRow(31);
-                    HSSFCell cellA32 = row30.createCell(0);
-
-                    HSSFRow critHeader = worksheet.createRow(32);
-                    HSSFCell cellA33 = critHeader.createCell(0);
-                    cellA33.setCellValue("13 Critical Ions");
-                    worksheet.addMergedRegion(new CellRangeAddress(32, 32, 0, size));
-                    cellA33.setCellStyle(greyStyle);
-
-                    HSSFRow critLot = worksheet.createRow(33);
-                    HSSFCell cellA34 = critLot.createCell(0);
-                    cellA34.setCellValue("Lot: ");
-                    cellA34.setCellStyle(greyStyle);
-
-                    HSSFRow critConc = worksheet.createRow(34);
-                    HSSFCell cellA35 = critConc.createCell(0);
-                    cellA35.setCellValue("Analyte");
-                    cellA35.setCellStyle(greyStyle);
-
-                    HSSFRow critNa = worksheet.createRow(35);
-                    HSSFCell cellA36 = critNa.createCell(0);
-                    cellA36.setCellValue("Na");
-                    cellA36.setCellStyle(greyStyle);
-
-                    HSSFRow critMg = worksheet.createRow(36);
-                    HSSFCell cellA37 = critMg.createCell(0);
-                    cellA37.setCellValue("Mg");
-                    cellA37.setCellStyle(greyStyle);
-
-                    HSSFRow critAl = worksheet.createRow(37);
-                    HSSFCell cellA38 = critAl.createCell(0);
-                    cellA38.setCellValue("Al");
-                    cellA38.setCellStyle(greyStyle);
-
-                    HSSFRow critK = worksheet.createRow(38);
-                    HSSFCell cellA39 = critK.createCell(0);
-                    cellA39.setCellValue("K");
-                    cellA39.setCellStyle(greyStyle);
-
-                    HSSFRow critCa = worksheet.createRow(39);
-                    HSSFCell cellA40 = critCa.createCell(0);
-                    cellA40.setCellValue("Ca");
-                    cellA40.setCellStyle(greyStyle);
-
-                    HSSFRow critCr = worksheet.createRow(40);
-                    HSSFCell cellA41 = critCr.createCell(0);
-                    cellA41.setCellValue("Cr");
-                    cellA41.setCellStyle(greyStyle);
-
-                    HSSFRow critMn = worksheet.createRow(41);
-                    HSSFCell cellA42 = critMn.createCell(0);
-                    cellA42.setCellValue("Mn");
-                    cellA42.setCellStyle(greyStyle);
-
-                    HSSFRow critFe = worksheet.createRow(42);
-                    HSSFCell cellA43 = critFe.createCell(0);
-                    cellA43.setCellValue("Fe");
-                    cellA43.setCellStyle(greyStyle);
-
-                    HSSFRow critNi = worksheet.createRow(43);
-                    HSSFCell cellA44 = critNi.createCell(0);
-                    cellA44.setCellValue("Ni");
-                    cellA44.setCellStyle(greyStyle);
-
-                    HSSFRow critCu = worksheet.createRow(44);
-                    HSSFCell cellA45 = critCu.createCell(0);
-                    cellA45.setCellValue("Cu");
-                    cellA45.setCellStyle(greyStyle);
-
-                    HSSFRow critSn = worksheet.createRow(45);
-                    HSSFCell cellA46 = critSn.createCell(0);
-                    cellA46.setCellValue("Sn");
-                    cellA46.setCellStyle(greyStyle);
-                    
-                    HSSFRow critZn = worksheet.createRow(46);
-                    HSSFCell cellA47 = critZn.createCell(0);
-                    cellA47.setCellValue("Zn");
-                    cellA47.setCellStyle(greyStyle);
-                    
-                    HSSFRow critTi = worksheet.createRow(47);
-                    HSSFCell cellA48 = critTi.createCell(0);
-                    cellA48.setCellValue("Ti");
-                    cellA48.setCellStyle(greyStyle);
-                    
-                    HSSFRow critTot = worksheet.createRow(48);
-                    HSSFCell cellA49 = critTot.createCell(0);
-                    cellA49.setCellValue("Total: ");
-                    cellA49.setCellStyle(greyStyle); 
-
-                    workbook.write(ions);
-                    ions.flush();
-                    ions.close();
-                    
-                    
-                            
-                } 
-                    
-               
-
-                templatePath = template.getAbsolutePath();
-                convert(templatePath);
-            } catch (IOException ex) {
-                Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
-            }
+    private static void excelTemplate() throws IOException {   //creates my excel template that will be filled with the ICP-MS Ions data
+        if(isChecked){
+            convert("/Users/pluebbert/NetBeansProjects/PDFtoExcel/build/OCR_Excel_Template/OCR_Excel_Template.xlsx");
         }
+        if(!isChecked){
+            tmp = new File(dirPath + System.getProperty("file.separator") +"Template_Ions.xls");
+            tmpPath = tmp.getAbsolutePath();
+            boolean exists = tmp.exists();
+
+            if (exists) {
+                String templatePath = tmp.getAbsolutePath();
+                convert(templatePath);
+            } else {
+
+                System.out.println("***********************");
+                System.out.println("Creating Excel Template");
+                System.out.println("***********************");
+
+                String templatePath = null;
+                try {
+                    File template = new File(dirPath + System.getProperty("file.separator") +"Template_Ions.xls"); //creates the template file
+                    template.createNewFile();
+                    try (FileOutputStream ions = new FileOutputStream(template, false)) {
+
+                        HSSFWorkbook workbook = new HSSFWorkbook();
+                        HSSFSheet worksheet = workbook.createSheet("Ions");
+
+                        Font fontBold = workbook.createFont();
+                        fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
+                        Font fontRed = workbook.createFont();
+                        fontRed.setColor(HSSFColor.RED.index);
+
+                        //Grey Cell Style
+                        HSSFCellStyle greyStyle = workbook.createCellStyle();
+                        greyStyle.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                        greyStyle.setFillPattern(CellStyle.SOLID_FOREGROUND);
+                        greyStyle.setAlignment(ALIGN_CENTER);
+                        greyStyle.setBorderBottom(HSSFCellStyle.BORDER_THIN);
+                        greyStyle.setBorderTop(HSSFCellStyle.BORDER_THIN);
+                        greyStyle.setBorderLeft(HSSFCellStyle.BORDER_THIN);
+                        greyStyle.setBorderRight(HSSFCellStyle.BORDER_THIN);
+
+                        //grey Bold style (for critical Ions)
+                        HSSFCellStyle greyStyleBold = workbook.createCellStyle();
+                        greyStyleBold.setFont(fontBold);
+                        greyStyleBold.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+                        greyStyleBold.setFillPattern(CellStyle.SOLID_FOREGROUND);
+                        greyStyleBold.setAlignment(ALIGN_CENTER);
+                        greyStyleBold.setBorderBottom(HSSFCellStyle.BORDER_THIN);
+                        greyStyleBold.setBorderTop(HSSFCellStyle.BORDER_THIN);
+                        greyStyleBold.setBorderLeft(HSSFCellStyle.BORDER_THIN);
+                        greyStyleBold.setBorderRight(HSSFCellStyle.BORDER_THIN);
+
+                        System.out.println("Populating common fields..... ");
+
+                        System.out.println(selectedFileSize);
+                /* rest of this method creates each row, then creates the first cell 
+                   of the column and fills it with the ions template */
+                        String[] nameString = {"name", "lot", "stage", "conc", "Be", "Na", "Mg", 
+                                "Al", "K", "Ca", "Ti", "Cr", "Mn", "Fe", "Co", "Ni",
+                                "Cu", "Ga", "Zr", "Mo", "Ru", "Cd", "In", "Sn", "Li",
+                                "Zn", "Sb", "W", "Pb", "row30", "row31", "critHeader",
+                                "critLot", "critConc", "critNa", "critMg", "critAl", 
+                                "critK", "critCa", "critCr", "critMn", "critFe",
+                                "critNi", "critCu", "critTot"};
+
+                        System.out.println("Name sting: ");
+                        for (String nameString1 : nameString) {
+                            System.out.print(nameString1 + ", ");
+                        }
+                        //String[] text = {"Name: ", "Lot #: ", "Stage: ", "Analyte: ", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Ga", "Zr", "Mo", "Ru", "Cd", "In", "Sn", "Li", "Zn", "Sb", "W", "Pb", "row30", "row31", "10 Critical Ions", "Lot: ", "Conc: ", "Na", "Mg", "Al", "K", "Ca", "Cr", "Mn", "Fe", "Ni", "Cu", "Total: "};
+
+                        //cellCreator cell = new cellCreator(worksheet);
+                        //cell.createCells(text, greyStyle);
+
+                        System.out.println("Cell String: ");
+                        String[] cells = new String[50];//cellA1-A46
+                        for (int i = 0; i < 46; i++) {
+                            cells[i] = "cellA" + (i + 1);
+                            System.out.print(cells[i] + ", ");
+                        }
+
+                        System.out.println("Text String: "); //Could add customizable Excels by user inputting template names for String[] text
+                        String[] text = {"Name: ", "Lot #: ", "Stage: ", "Analyte: ", "Be", "Na", "Mg", "Al", "K", "Ca", "Ti", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Ga", "Zr", "Mo", "Ru", "Cd", "In", "Sn", "Li", "Zn", "Sb", "W", "Pb", "row30", "row31", "10 Critical Ions", "Lot: ", "Conc: ", "Na", "Mg", "Al", "K", "Ca", "Cr", "Mn", "Fe", "Ni", "Cu", "Total: "};
+                        for (int i = 0; i < nameString.length; ++i) {
+                            System.out.print(text[i] + ", ");
+                        }
+                        System.out.println("**");
+
+                        System.out.println("Text list is " + text.length + " indexies long.");
+
+                        cellCreator cell = new cellCreator(worksheet);
+                        cell.createCells(text, greyStyle);
+
+
+
+                        HSSFRow name = worksheet.createRow(0);   //creates row 1
+                        HSSFCell cellA1 = name.createCell(0); // creates cell A1
+                        cellA1.setCellValue("Name: ");   //sets value of cell
+                        cellA1.setCellStyle(greyStyleBold); //sets cell style(bold for either header or critical ion)
+
+                        HSSFRow lot = worksheet.createRow(1);
+                        HSSFCell cellA2 = lot.createCell(0);
+                        cellA2.setCellValue("Lot #: ");
+                        cellA2.setCellStyle(greyStyleBold);
+
+                        HSSFRow stage = worksheet.createRow(2);
+                        HSSFCell cellA3 = stage.createCell(0);
+                        cellA3.setCellValue("Stage: ");
+                        cellA3.setCellStyle(greyStyleBold);
+
+                        HSSFRow conc = worksheet.createRow(3);
+                        HSSFCell cellA4 = conc.createCell(0);
+                        cellA4.setCellValue("Analyte");
+                        cellA4.setCellStyle(greyStyleBold);
+
+                        HSSFRow Be = worksheet.createRow(4);
+                        HSSFCell cellA5 = Be.createCell(0);
+                        cellA5.setCellValue("Be");
+                        cellA5.setCellStyle(greyStyle);
+
+                        HSSFRow Na = worksheet.createRow(5);
+                        HSSFCell cellA6 = Na.createCell(0);
+                        cellA6.setCellValue("Na");
+                        cellA6.setCellStyle(greyStyleBold);
+
+                        HSSFRow Mg = worksheet.createRow(6);
+                        HSSFCell cellA7 = Mg.createCell(0);
+                        cellA7.setCellValue("Mg");
+                        cellA7.setCellStyle(greyStyleBold);
+
+                        HSSFRow Al = worksheet.createRow(7);
+                        HSSFCell cellA8 = Al.createCell(0);
+                        cellA8.setCellValue("Al");
+                        cellA8.setCellStyle(greyStyleBold);
+
+                        HSSFRow K = worksheet.createRow(8);
+                        HSSFCell cellA9 = K.createCell(0);
+                        cellA9.setCellValue("K");
+                        cellA9.setCellStyle(greyStyleBold);
+
+                        HSSFRow Ca = worksheet.createRow(9);
+                        HSSFCell cellA10 = Ca.createCell(0);
+                        cellA10.setCellValue("Ca");
+                        cellA10.setCellStyle(greyStyleBold);
+
+                        HSSFRow Ti = worksheet.createRow(10);
+                        HSSFCell cellA11 = Ti.createCell(0);
+                        cellA11.setCellValue("Ti");
+                        cellA11.setCellStyle(greyStyle);
+
+                        HSSFRow Cr = worksheet.createRow(11);
+                        HSSFCell cellA12 = Cr.createCell(0);
+                        cellA12.setCellValue("Cr");
+                        cellA12.setCellStyle(greyStyleBold);
+
+                        HSSFRow Mn = worksheet.createRow(12);
+                        HSSFCell cellA13 = Mn.createCell(0);
+                        cellA13.setCellValue("Mn");
+                        cellA13.setCellStyle(greyStyleBold);
+
+                        HSSFRow Fe = worksheet.createRow(13);
+                        HSSFCell cellA14 = Fe.createCell(0);
+                        cellA14.setCellValue("Fe");
+                        cellA14.setCellStyle(greyStyleBold);
+
+                        HSSFRow Co = worksheet.createRow(14);
+                        HSSFCell cellA15 = Co.createCell(0);
+                        cellA15.setCellValue("Co");
+                        cellA15.setCellStyle(greyStyle);
+
+                        HSSFRow Ni = worksheet.createRow(15);
+                        HSSFCell cellA16 = Ni.createCell(0);
+                        cellA16.setCellValue("Ni");
+                        cellA16.setCellStyle(greyStyleBold);
+
+                        HSSFRow Cu = worksheet.createRow(16);
+                        HSSFCell cellA17 = Cu.createCell(0);
+                        cellA17.setCellValue("Cu");
+                        cellA17.setCellStyle(greyStyleBold);
+
+                        HSSFRow Ga = worksheet.createRow(17);
+                        HSSFCell cellA18 = Ga.createCell(0);
+                        cellA18.setCellValue("Ga");
+                        cellA18.setCellStyle(greyStyle);
+
+                        HSSFRow Zr = worksheet.createRow(18);
+                        HSSFCell cellA19 = Zr.createCell(0);
+                        cellA19.setCellValue("Zr");
+                        cellA19.setCellStyle(greyStyle);
+
+                        HSSFRow Mo = worksheet.createRow(19);
+                        HSSFCell cellA20 = Mo.createCell(0);
+                        cellA20.setCellValue("Mo");
+                        cellA20.setCellStyle(greyStyle);
+
+                        HSSFRow Ru = worksheet.createRow(20);
+                        HSSFCell cellA21 = Ru.createCell(0);
+                        cellA21.setCellValue("Ru");
+                        cellA21.setCellStyle(greyStyle);
+
+                        HSSFRow Cd = worksheet.createRow(21);
+                        HSSFCell cellA22 = Cd.createCell(0);
+                        cellA22.setCellValue("Cd");
+                        cellA22.setCellStyle(greyStyle);
+
+                        HSSFRow In = worksheet.createRow(22);
+                        HSSFCell cellA23 = In.createCell(0);
+                        cellA23.setCellValue("In");
+                        cellA23.setCellStyle(greyStyle);
+
+                        HSSFRow Sn = worksheet.createRow(23);
+                        HSSFCell cellA24 = Sn.createCell(0);
+                        cellA24.setCellValue("Sn");
+                        cellA24.setCellStyle(greyStyle);
+
+                        HSSFRow Li = worksheet.createRow(24);
+                        HSSFCell cellA25 = Li.createCell(0);
+                        cellA25.setCellValue("Li");
+                        cellA25.setCellStyle(greyStyle);
+
+                        HSSFRow Zn = worksheet.createRow(25);
+                        HSSFCell cellA26 = Zn.createCell(0);
+                        cellA26.setCellValue("Zn");
+                        cellA26.setCellStyle(greyStyle);
+
+                        HSSFRow Sb = worksheet.createRow(26);
+                        HSSFCell cellA27 = Sb.createCell(0);
+                        cellA27.setCellValue("Sb");
+                        cellA27.setCellStyle(greyStyle);
+
+                        HSSFRow W = worksheet.createRow(27);
+                        HSSFCell cellA28 = W.createCell(0);
+                        cellA28.setCellValue("W");
+                        cellA28.setCellStyle(greyStyle);
+
+                        HSSFRow Pb = worksheet.createRow(28);
+                        HSSFCell cellA29 = Pb.createCell(0);
+                        cellA29.setCellValue("Pb");
+                        cellA29.setCellStyle(greyStyle);
+
+                        HSSFRow tot = worksheet.createRow(29);
+                        HSSFCell cellA30 = tot.createCell(0);
+                        cellA30.setCellValue("Total: ");
+                        cellA30.setCellStyle(greyStyle);
+
+                        HSSFRow row30 = worksheet.createRow(30);
+                        HSSFCell cellA31 = row30.createCell(0);
+
+                        HSSFRow row31 = worksheet.createRow(31);
+                        HSSFCell cellA32 = row30.createCell(0);
+
+                        HSSFRow critHeader = worksheet.createRow(32);
+                        HSSFCell cellA33 = critHeader.createCell(0);
+                        cellA33.setCellValue("13 Critical Ions");
+                        worksheet.addMergedRegion(new CellRangeAddress(32, 32, 0, size));
+                        cellA33.setCellStyle(greyStyle);
+
+                        HSSFRow critLot = worksheet.createRow(33);
+                        HSSFCell cellA34 = critLot.createCell(0);
+                        cellA34.setCellValue("Lot: ");
+                        cellA34.setCellStyle(greyStyle);
+
+                        HSSFRow critConc = worksheet.createRow(34);
+                        HSSFCell cellA35 = critConc.createCell(0);
+                        cellA35.setCellValue("Analyte");
+                        cellA35.setCellStyle(greyStyle);
+
+                        HSSFRow critNa = worksheet.createRow(35);
+                        HSSFCell cellA36 = critNa.createCell(0);
+                        cellA36.setCellValue("Na");
+                        cellA36.setCellStyle(greyStyle);
+
+                        HSSFRow critMg = worksheet.createRow(36);
+                        HSSFCell cellA37 = critMg.createCell(0);
+                        cellA37.setCellValue("Mg");
+                        cellA37.setCellStyle(greyStyle);
+
+                        HSSFRow critAl = worksheet.createRow(37);
+                        HSSFCell cellA38 = critAl.createCell(0);
+                        cellA38.setCellValue("Al");
+                        cellA38.setCellStyle(greyStyle);
+
+                        HSSFRow critK = worksheet.createRow(38);
+                        HSSFCell cellA39 = critK.createCell(0);
+                        cellA39.setCellValue("K");
+                        cellA39.setCellStyle(greyStyle);
+
+                        HSSFRow critCa = worksheet.createRow(39);
+                        HSSFCell cellA40 = critCa.createCell(0);
+                        cellA40.setCellValue("Ca");
+                        cellA40.setCellStyle(greyStyle);
+
+                        HSSFRow critCr = worksheet.createRow(40);
+                        HSSFCell cellA41 = critCr.createCell(0);
+                        cellA41.setCellValue("Cr");
+                        cellA41.setCellStyle(greyStyle);
+
+                        HSSFRow critMn = worksheet.createRow(41);
+                        HSSFCell cellA42 = critMn.createCell(0);
+                        cellA42.setCellValue("Mn");
+                        cellA42.setCellStyle(greyStyle);
+
+                        HSSFRow critFe = worksheet.createRow(42);
+                        HSSFCell cellA43 = critFe.createCell(0);
+                        cellA43.setCellValue("Fe");
+                        cellA43.setCellStyle(greyStyle);
+
+                        HSSFRow critNi = worksheet.createRow(43);
+                        HSSFCell cellA44 = critNi.createCell(0);
+                        cellA44.setCellValue("Ni");
+                        cellA44.setCellStyle(greyStyle);
+
+                        HSSFRow critCu = worksheet.createRow(44);
+                        HSSFCell cellA45 = critCu.createCell(0);
+                        cellA45.setCellValue("Cu");
+                        cellA45.setCellStyle(greyStyle);
+
+                        HSSFRow critSn = worksheet.createRow(45);
+                        HSSFCell cellA46 = critSn.createCell(0);
+                        cellA46.setCellValue("Sn");
+                        cellA46.setCellStyle(greyStyle);
+
+                        HSSFRow critZn = worksheet.createRow(46);
+                        HSSFCell cellA47 = critZn.createCell(0);
+                        cellA47.setCellValue("Zn");
+                        cellA47.setCellStyle(greyStyle);
+
+                        HSSFRow critTi = worksheet.createRow(47);
+                        HSSFCell cellA48 = critTi.createCell(0);
+                        cellA48.setCellValue("Ti");
+                        cellA48.setCellStyle(greyStyle);
+
+                        HSSFRow critTot = worksheet.createRow(48);
+                        HSSFCell cellA49 = critTot.createCell(0);
+                        cellA49.setCellValue("Total: ");
+                        cellA49.setCellStyle(greyStyle); 
+
+                        workbook.write(ions);
+                        ions.flush();
+                        ions.close();
+
+                    } 
+
+                    templatePath = template.getAbsolutePath();
+                    convert(templatePath);
+                } catch (IOException ex) {
+                    Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+            }
+       }
     }
 
-    private static void convert(String templatePath) { //runs program on order that the PDF's are listed in listview
+    private static void convert(String templatePath) throws IOException { //runs program on order that the PDF's are listed in listview
         //this allows excel to be filled in the desired order
         for (String selString : selStrings) {
             System.out.println("LOOK AT ME " + selString);
-            pdfToTxt(selString, templatePath);
+            if(isChecked == true){
+                System.out.println("Agilent 7900 PDF selected: Running OCR");
+                sampleName = selString;
+                pdfToJpg(selString, templatePath);
+                
+            }
+            else{
+                System.out.println("Legacy PDF Selected, Running old version");
+                pdfToTxt(selString, templatePath);
+            }
         }
     }
-
+    
     private static void pdfToTxt(String fPath, String templatePath) {
         selectedFileSize = size;
 
@@ -807,13 +929,74 @@ public class PDFtoExcel extends Application {
             }
 
             wr.close();
-            
+            System.out.println("pdf to text done");
             txtToCsv(templatePath);
         } catch (Exception e) {
         }
     }
+    
+    private static void pdfToJpg(String fPath, String templatePath) throws IOException{
+        PDDocument pdf = PDDocument.load(new File(fPath));
+        
+        //PDDocument pdf = PDDocument.load(new File("/Users/pluebbert/Desktop/mets_rr18_7900.pdf"));
+                         //Test PDDCOUMENT ABOVE
+                         
+        PDFRenderer pdfRenderer = new PDFRenderer(pdf);
+        String output = dirPath + System.getProperty("file.separator") +"ocr_PDF.jpg" ;
+        
+        System.out.println("PDF TO JPG RENDERER CREATED");
+        System.out.println(pdf.getNumberOfPages());
+        BufferedImage bim = pdfRenderer.renderImageWithDPI(0, 300, ImageType.BINARY);
+        
+        System.out.println("Writing Image as ocr_pdf.jpg");
+        ImageIOUtil.writeImage(bim, output, 300);
+        
+        System.out.println("JPG Created");
+        pdf.close();
+        ocr(output, templatePath);
+    }
+    
+    private static void ocr(String jpg, String templatePath) throws IOException{
+        
+        System.out.println("HERE 1");
+                
+        System.out.println("Wrote Image to file");
+        File output = new File(dirPath + System.getProperty("file.separator") +"output.txt");
+        File imageFile = new File(jpg);
+        //File imageFile = new File("/Users/pluebbert/Downloads/Tess4J/ocr_test_file.jpg"); //Test file
+        if(imageFile.exists()){
+            System.out.println("Image exsists!");
+            System.out.println(imageFile.getAbsolutePath());
+        }
+        System.out.println("******************** AHHHHHHHHH H********************");
+        System.out.println("RUNNING OCR!!!!!!!!!");
+        System.out.println("");
+        System.out.println("");
+        Tesseract tes = new Tesseract();
+        
+        try {
+            tes.setDatapath("/Users/pluebbert/Downloads/Tess4J/tessdata");
+            String text = tes.doOCR(imageFile);
+            System.out.println(text);
+            System.out.println("Now printing ocrOut[]");
+            String[] ocrOut = text.split(" ");
+            System.out.println(ocrOut);
+            try {
+                FileUtils.writeStringToFile(output, text);//Set the file directory to the txt to csv file directory
+                /* Analyte, Mass, Conc, Units, CPS, Conc. RSD, Tune Mode*/
+            } catch (IOException ex) {
+                Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        catch (TesseractException e){
+            e.printStackTrace();
+        }
+        System.out.println("OCR Complete");
+        txtToCsv(templatePath);
+    }
 
     private static void txtToCsv(String templatePath) throws IOException {
+        System.out.println("Starting txtToCSV");
         File file = new File(dirPath + System.getProperty("file.separator") +"output.txt"); //grabs text file from before
         Scanner scan = new Scanner(file);
         csvFile = new File(dirPath + System.getProperty("file.separator") +"CSV.csv");  //creates new CSV file
@@ -832,6 +1015,7 @@ public class PDFtoExcel extends Application {
             writer.flush();
             
         }
+        System.out.println("Break");
         scan.close();
         writer.close();
         file.delete();
@@ -839,6 +1023,7 @@ public class PDFtoExcel extends Application {
     }
 
     private static void getData(String templatePath) throws IOException {
+        System.out.println("Starting getData()");
         System.out.println("******************************");
         String stage = null;    //initializing all strings needed below
         String a = null;
@@ -874,12 +1059,21 @@ public class PDFtoExcel extends Application {
 
         List<String> list = new ArrayList<>();
         List<String> Ion = new ArrayList<>();
-
+        List<String> tuenMode = new ArrayList<>();
+        
         FileResource csv = new FileResource(dirPath + System.getProperty("file.separator") +"CSV.csv"); //grabs previously created CSV file
         CSVParser parser = csv.getCSVParser(false);
+        
+             
+       
+        
         for (CSVRecord record : parser) { //Scans CSV
             a = record.get(0); //scans first column of CSV
-            
+            if(isChecked){
+                material = sampleNames.get(n-1);
+                System.out.println(material);
+                
+            }
             if (a.contains("Material:")) { //if desired word is in first column of CSV
                 System.out.println("Perkin Elmer File");
                 System.out.println(a + " " + record.get(1));
@@ -894,7 +1088,7 @@ public class PDFtoExcel extends Application {
                 lot = record.get(2);
                     if(lot.isEmpty()){
                         lot = ("Lot Number");
-                    }; 
+                    } 
                 
                 list.add(lot);
                 Ion.add(record.get(0));
@@ -914,151 +1108,264 @@ public class PDFtoExcel extends Application {
                 Ion.add(record.get(0));
                 System.out.println(list);
             }
-            if (a.contains("Analyte")) {
+            if (a.contains("Analyte") && !isChecked) {
                 System.out.println(a + "" + record.get(6));
                 analyte = record.get(6);
                 list.add(analyte);
                 Ion.add(record.get(0));
             }
+            
+            if(isChecked){
+                if(a.toUpperCase().contains("LI") && a.length() <=3){
+                   Li = record.get(2); 
+                   Li = zeroCorrection.zeroCorrection(Li);
+                   list.add(Li);
+                   
+                   Ion.add("Li");
+                }
+            }
 
-            if (a.contains("Be") && a.length() <= 3) { //if the Ion is what I'm looking for 
-                Be = record.get(3);                  //and its only 2 chars long
-                if(Be.contains("S")){
+            if (a.toUpperCase().contains("BE") && a.length() <= 3) { //if the Ion is what I'm looking for //and its only 2 chars long
+                if(isChecked){
+                    Be = record.get(2);
+                    Be = zeroCorrection.zeroCorrection(Be);
+                }
+                else{
+                    Be = record.get(3); 
+                }
+                if(Be.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                    } 
                 else{
-                list.add(Be);                        //add the resulting conc to list
-                Ion.add(record.get(0)); 
+                    list.add(Be);                        //add the resulting conc to list
+                    Ion.add(record.get(0)); 
                 }//add the ion name to Ion
             }
 
-            if (a.contains("Na") && a.length() <= 3) {
-                Na = record.get(3);
-                if(Na.contains("S")){
+            if (a.toUpperCase().contains("NA") && a.length() <= 3) {
+                if(isChecked){
+                    Na = record.get(2);
+                    Na = zeroCorrection.zeroCorrection(Na);
+                }
+                else{
+                    Na = record.get(3);
+                }
+                if(Na.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Na);
-                Ion.add(record.get(0));
+                    list.add(Na);
+                    Ion.add(record.get(0));
                 }
                 
             }
-            if (a.contains("Mg") && a.length() <= 3) {
-                Mg = record.get(3);
-                if(Mg.contains("S")){
+            if (a.toUpperCase().contains("MG") && a.length() <= 3) {
+                if(isChecked){
+                    Mg = record.get(2);
+                    Mg = zeroCorrection.zeroCorrection(Mg);
+                }
+                else{
+                    Mg = record.get(3);
+                }
+                if(Mg.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+               } 
                 else{
-                list.add(Mg);
-                Ion.add(record.get(0));
+                    list.add(Mg);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Al") && a.length() <= 3) {
-                Al = record.get(3);
-                if(Al.contains("S")){
+            
+            if (a.toUpperCase().contains("AL") && a.length() <= 3) {
+                if(isChecked){
+                    Al = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                 Al = record.get(3);
+                }
+                if(Al.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Al);
-                Ion.add(record.get(0));
+                    list.add(Al);
+                    Ion.add(record.get(0));
                 }
                 
             }
-            if (a.contains("K") && a.length() <= 3) {
-                K = record.get(3);
-                if(K.contains("S")){
+            
+            if(a.toUpperCase().contains("AI") && a.length() <=3){
+                Al = zeroCorrection.zeroCorrection(record.get(2));
+                
+                if(Al.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(K);
-                Ion.add(record.get(0));
+                    list.add(Al);
+                    Ion.add(record.get(0));
                 }
-            }
-            if (a.contains("Ca") && a.length() <= 3) {
-                Ca = record.get(3);
-                if(Ca.contains("S")){
+             }
+            if (a.toUpperCase().contains("K") && a.length() <= 3) {
+                if(isChecked){
+                    K = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    K = record.get(3);
+                }
+                if(K.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Ca);
-                Ion.add(record.get(0));
+                    list.add(K);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Ti") && a.length() <= 3) {
-                Ti = record.get(3);
-                if(Ti.contains("S")){
+            
+            if (a.toUpperCase().contains("CA") && a.length() <= 3) {
+                if(isChecked){
+                    Ca = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Ca = record.get(3);
+                }
+                if(Ca.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Ti);
-                Ion.add(record.get(0));
+                 list.add(Ca);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Cr") && a.length() <= 3) {
-                Cr = record.get(3);
-                if(Cr.contains("S")){
+            
+            if (a.toUpperCase().contains("TI") && a.length() <= 3) {
+                if(isChecked){
+                    Ti = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Ti = record.get(3);
+                }
+                if(Ti.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Cr);
-                Ion.add(record.get(0));
+                    list.add(Ti);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Mn") && a.length() <= 3) {
-                Mn = record.get(3);
-                if(Mn.contains("S")){
+            
+            if(isChecked){
+                if(a.toUpperCase().contains("V") && a.length() <=2){
+                    String v = zeroCorrection.zeroCorrection(record.get(2));
+                    list.add(v);
+                    Ion.add("V");
+                }
+            }
+            
+            if (a.toUpperCase().contains("CR") && a.length() <= 3) {
+                if(isChecked){
+                    Cr = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Cr = record.get(3);
+                }
+                if(Cr.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Mn);
-                Ion.add(record.get(0));
+                    list.add(Cr);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Fe") && a.length() <= 3) {
-                Fe = record.get(3);
-                if(Fe.contains("S")){
+            
+            if (a.toUpperCase().contains("MN") && a.length() <= 3) {
+                if(isChecked){
+                    Mn = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Mn = record.get(3);
+                }
+                if(Mn.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Fe);
-                Ion.add(record.get(0));
+                    list.add(Mn);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Co") && a.length() <= 3) {
-                Co = record.get(3);
-                if(Co.contains("S")){
+            
+            if (a.toUpperCase().contains("FE") && a.length() <= 3) {
+                if(isChecked){
+                    Fe = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Fe = record.get(3);
+                }
+                if(Fe.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Co);
-                Ion.add(record.get(0));
+                    list.add(Fe);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Ni") && a.length() <= 3) {
-                Ni = record.get(3);
-                if(Ni.contains("S")){
+            
+            if(isChecked){
+                if (a.toUpperCase().contains("NI") && a.length() <= 3) {
+                    Ni = zeroCorrection.zeroCorrection(record.get(2));
+                    list.add(Ni);
+                    Ion.add(record.get(0));
+                }
+            }
+            
+            if (a.toUpperCase().contains("CO") && a.length() <= 3) {
+                if(isChecked){
+                    Co = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Co = record.get(3);
+                }
+                
+                if(Co.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Ni);
-                Ion.add(record.get(0));
+                    list.add(Co);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Cu") && a.length() <= 3) {
-                Cu = record.get(3);
-                if(Cu.contains("S")){
+            if(!isChecked){
+                if (a.toUpperCase().contains("NI") && a.length() <= 3) {
+                    Ni = zeroCorrection.zeroCorrection(record.get(3));
+                    if(Ni.toUpperCase().contains("S")){
+                       list.add("Saturated");
+                       Ion.add("Saturated");
+                  } 
+                    else{
+                    list.add(Ni);
+                    Ion.add(record.get(0));
+                    }
+                }
+            }
+            
+            if (a.toUpperCase().contains("CU") && a.length() <= 3) {
+                if(isChecked){
+                    Cu = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Cu = record.get(3);
+                }
+                if(Cu.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
               } 
@@ -1067,9 +1374,23 @@ public class PDFtoExcel extends Application {
                 Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Ga") && a.length() <= 3) {
-                Ga = record.get(3);
-                if(Ga.contains("S")){
+            
+             if(isChecked){
+                if (a.toUpperCase().contains("ZN") && a.length() <= 3) {
+                    Zn = zeroCorrection.zeroCorrection(record.get(2));
+                    list.add(Zn);
+                    Ion.add(record.get(0));
+                }
+            }
+            
+            if (a.toUpperCase().contains("GA") && a.length() <= 3) {
+                 if(isChecked){
+                    Ga = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Ga = record.get(3);
+                }
+                if(Ga.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
               } 
@@ -1078,97 +1399,159 @@ public class PDFtoExcel extends Application {
                 Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Zr") && a.length() <= 3) {
-                Zr = record.get(3);
-                if(Zr.contains("S")){
-                   list.add("Saturated");
-                   Ion.add("Saturated");
-              } 
-                else{
-                list.add(Zr);
-                Ion.add(record.get(0));
+            
+            if(isChecked){
+                if (a.toUpperCase().contains("AS") && a.length() <= 3) {
+                   String As = zeroCorrection.zeroCorrection(record.get(2));
+                    list.add(As);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Mo") && a.length() <= 3) {
-                Mo = record.get(3);
-                if(Mo.contains("S")){
+            
+            if (a.toUpperCase().contains("ZR") && a.length() <= 3) {
+                if(isChecked){
+                    Zr = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Zr = record.get(3);
+                }
+                if(Zr.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Mo);
-                Ion.add(record.get(0));
+                    list.add(Zr);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Ru") && a.length() <= 3) {
-                Ru = record.get(3);
-                if(Ru.contains("S")){
+            
+            if (a.toUpperCase().contains("MO") && a.length() <= 3) {
+                if(isChecked){
+                    Mo = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Mo = record.get(3);
+                }
+                if(Mo.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                 } 
                 else{
-                list.add(Ru);
-                Ion.add(record.get(0));
+                    list.add(Mo);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Cd") && a.length() <= 3) {
-                Cd = record.get(3);
-                if(Cd.contains("S")){
+            
+            if (a.toUpperCase().contains("RU") && a.length() <= 3) {
+                if(isChecked){
+                    Ru = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Ru = record.get(3);
+                }
+                if(Ru.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Cd);
-                Ion.add(record.get(0));
+                    list.add(Ru);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("In") && a.length() <= 3) {
-                In = record.get(3);
-                if(In.contains("S")){
+            if(isChecked){
+                if (a.toUpperCase().contains("AG") && a.length() <= 3) {
+                   String Ag = zeroCorrection.zeroCorrection(record.get(2));
+                    list.add(Ag);
+                    Ion.add(record.get(0));
+                }
+            }
+            
+            if (a.toUpperCase().contains("CD") && a.length() <= 3) {
+                 if(isChecked){
+                    Cd = record.get(2);
+                    Cd = zeroCorrection.zeroCorrection(Cd);
+                }
+                else{
+                    Cd = record.get(3);
+                }
+                if(Cd.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                 } 
                 else{
-                list.add(In);
-                Ion.add(record.get(0));
+                    list.add(Cd);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Sn") && a.length() <= 3) {
-                Sn = record.get(3);
-                if(Sn.contains("S")){
+            
+            if (a.toUpperCase().contains("IN") && a.length() <= 3) {
+                 if(isChecked){
+                    In = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    In = record.get(3);
+                }
+                if(In.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Sn);
-                Ion.add(record.get(0));
+                    list.add(In);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Li") && a.length() <= 3) {
-                Li = record.get(3);
-                if(Li.contains("S")){
+            
+            if (a.toUpperCase().contains("SN") && a.length() <= 3) {
+                 if(isChecked){
+                    Sn = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Sn = record.get(3);
+                }
+                if(Sn.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Li);
-                Ion.add(record.get(0));
+                    list.add(Sn);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Zn") && a.length() <= 3) {
-                Zn = record.get(3);
-                if(Zn.contains("S")){
-                   list.add("Saturated");
-                   Ion.add("Saturated");
-              } 
-                else{
-                list.add(Zn);
-                Ion.add(record.get(0));
+            if(!isChecked){
+                if (a.toUpperCase().contains("LI") && a.length() <= 3) {
+                    Li = zeroCorrection.zeroCorrection(record.get(3));
+                    if(Li.toUpperCase().contains("S")){
+                       list.add("Saturated");
+                       Ion.add("Saturated");
+                  } 
+                    else{
+                    list.add(Li);
+                    Ion.add(record.get(0));
+                    }
                 }
             }
-            if (a.contains("Sb") && a.length() <= 3) {
-                Sb = record.get(3);
-                if(Sb.contains("S")){
+            if(!isChecked){
+                if (a.toUpperCase().contains("ZN") && a.length() <= 3) {
+                    Zn = zeroCorrection.zeroCorrection(record.get(3));
+                    if(Zn.toUpperCase().contains("S")){
+                       list.add("Saturated");
+                       Ion.add("Saturated");
+                  } 
+                    else{
+                    list.add(Zn);
+                    Ion.add(record.get(0));
+                    }
+                }
+            }
+            
+            if (a.toUpperCase().contains("SB") && a.length() <= 3) {
+                 if(isChecked){
+                    Sb = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Sb = record.get(3);
+                }
+                if(Sb.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
               } 
@@ -1177,34 +1560,181 @@ public class PDFtoExcel extends Application {
                 Ion.add(record.get(0));
                 }
             }
-            if (a.contains("W") && a.length() <= 3) {
-                W = record.get(3);
-                if(W.contains("S")){
-                   list.add("Saturated");
-                   Ion.add("Saturated");
-              } 
-                else{
-                list.add(W);
-                Ion.add(record.get(0));
+            if(isChecked){
+                if(a.toUpperCase().contains("BA") && a.length() <=3){
+                    String Ba = zeroCorrection.zeroCorrection(record.get(2));
+                    list.add(Ba);
+                    Ion.add(record.get(0));
                 }
             }
-            if (a.contains("Pb") && a.length() <= 3) {
-                Pb = record.get(3);
-                if(Pb.contains("S")){
+            
+            if (a.toUpperCase().contains("W") && a.length() <= 3) {
+                 if(isChecked){
+                    W = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    W = record.get(3);
+                }
+                if(W.toUpperCase().contains("S")){
                    list.add("Saturated");
                    Ion.add("Saturated");
-              } 
+                } 
                 else{
-                list.add(Pb);
-                Ion.add(record.get(0));
+                    list.add(W);
+                    Ion.add(record.get(0));
+                }
+            }
+            if(isChecked){
+                if (a.toUpperCase().contains("IR") && a.length() <=3){
+                    String Ir = zeroCorrection.zeroCorrection(record.get(2));
+                    list.add(Ir);
+                    Ion.add(record.get(0));
+                }
+            }
+            
+            if(isChecked){
+                if(a.toUpperCase().contains("AU") && a.length() <=3){
+                    String Au = zeroCorrection.zeroCorrection(record.get(2));
+                    list.add(Au);
+                    Ion.add(record.get(0));
+                }
+            }
+            
+            if (a.toUpperCase().contains("PB") && a.length() <= 3) {
+                 if(isChecked){
+                    Pb = zeroCorrection.zeroCorrection(record.get(2));
+                }
+                else{
+                    Pb = record.get(3);
+                }
+                if(Pb.toUpperCase().contains("S")){
+                   list.add("Saturated");
+                   Ion.add("Saturated");
+                } 
+                else{
+                    list.add(Pb);
+                    Ion.add(record.get(0));
                 }
             }
         }
+     
         parser.close();
-
-        addToExcel(list, Ion, material, lotNum, templatePath);
+        
+        
+        
+        
+        if(isChecked){
+            System.out.println("Now going to run ocrAddToExcell");
+            ocrAddToExcel(list, Ion);
+        }
+        else{
+            addToExcel(list, Ion, material, lotNum, templatePath);
+        }
     }
+    
+    private static void ocrAddToExcel(List list, List Ion){
+        System.out.println("-_-_-_-_-_-_-_-_-_-_-_-_-_");
+        System.out.println("Starting OCR Add to excell");
+        System.out.println("-_-_-_-_-_-_-_-_-_-_-_-_-_");
+        String templatePath = "/Users/pluebbert/NetBeansProjects/PDFtoExcel/OCR_Excel_Template.xls";
+        System.out.println("Template: " + templatePath);
+        
+        File input = new File(templatePath);
+        File output = new File (dirPath + System.getProperty("file.separator") +"OCR_Excel_Template.xls");
+        if(!output.exists()){
+            try {
+                FileUtils.copyFile(input, output);
+            } catch (IOException ex) {
+                Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
+        
+         List<Double> doubleList = new ArrayList<>();
+         
+         
+         for(int i = 0; i <= list.size()-1; i++){
+            
+            Double conc = Double.parseDouble(list.get(i).toString());
+            
+            System.out.println(conc);
+            doubleList.add(conc);
+              
+         }
+         
+         try{
+             if(output.exists()){
+                 System.out.println("Found input stream file");
+                 System.out.println(output.getAbsolutePath());
+             }
+             
+             FileInputStream fileIn = new FileInputStream(new File(output.getAbsolutePath()));
+             System.out.println("FIS Created");
+             HSSFWorkbook book = new HSSFWorkbook(fileIn);
+             System.out.println("Grabbed book");
+             HSSFSheet sheet = book.getSheetAt(0);
+                          
+             int firstNum = sheet.getFirstRowNum(); //0
+             int lastNum = sheet.getLastRowNum(); //33
+             
+             
+             System.out.println("First num: " + firstNum + " lastNum:" + lastNum);
+             
+             for(int i = 0; i <= lastNum-1; i++){
+                 if(i==0){
+                     int a = 1 + sampleName.lastIndexOf("/");
+                     String name = sampleName.substring(a);
+                     Cell cell = sheet.getRow(i).createCell(n,Cell.CELL_TYPE_BLANK);
+                     cell.setCellValue(name);
+                 }
+                 if(i>=3){
+                    for(int j = 0; j<=doubleList.size()-1; j++){
+                       Double conc = doubleList.get(j);
 
+                       System.out.println("Conc: " + conc + " I: " + (i) + " j: " + j + " n::: " + n);
+
+                       Cell cell = sheet.getRow(i).createCell(n,Cell.CELL_TYPE_BLANK);
+                       System.out.println("Cell: " + n + " is type: " + cell.getCellType());
+                       cell.setCellValue(conc);
+
+                       System.out.println(cell.toString());
+                       i++;
+                    }
+                 }
+             }
+             
+             System.out.println("Done adding data to cells for pdf number: " + n);
+             fileIn.close();
+             FileOutputStream fileOut = new FileOutputStream(new File(output.getAbsolutePath()));
+            
+             System.out.println("Created output file at: " + output.getAbsolutePath());
+             
+             book.write(fileOut);
+             fileOut.flush();
+             //fileIn.close();
+             fileOut.close();
+             
+
+            ++n;
+            updateProgressBar(n);
+           // if empty, use default name, else user specified name
+        String destinationPath = isEmpty ? "Test" + "_" + "Test" + "_Ions.xls" : outputName + ".xls";
+
+        System.out.println("*************Template filled*************");
+        System.out.println("Now renaming file for you");
+
+        fileOut.close();
+        copy(output.getAbsolutePath(), destinationPath);
+
+    }
+         
+         
+         catch(Exception e){
+             e.printStackTrace();
+             System.out.println("File not found");
+         }
+    }
+    
     //addToExcel method takes the parsed data and fills it into the template sheet created earlier
     private static void addToExcel(List list, List Ion, String material, String lotNum, String templatePath) throws IOException {
         System.out.println("***************************************************");
@@ -1223,6 +1753,7 @@ public class PDFtoExcel extends Application {
 
         HSSFWorkbook workbook = new HSSFWorkbook(template);
         HSSFSheet worksheet = workbook.getSheetAt(0);
+        
         //Cell and Font Tyles
         Font fontBold = workbook.createFont();
         fontBold.setBoldweight(Font.BOLDWEIGHT_BOLD);
@@ -1404,6 +1935,7 @@ public class PDFtoExcel extends Application {
         HSSFRow critHeader = worksheet.getRow(32);
         HSSFCell cellA33 = critHeader.getCell(0);
         System.out.println("line 762");
+        
         HSSFRow critLot = worksheet.getRow(33);
         HSSFCell cellA34 = critLot.getCell(0);
 
@@ -1412,40 +1944,40 @@ public class PDFtoExcel extends Application {
 
         HSSFRow critNa = worksheet.getRow(35);
         HSSFCell cellA36 = critNa.getCell(0);
-
+        System.out.println("Line 1768");
         HSSFRow critMg = worksheet.getRow(36);
         HSSFCell cellA37 = critMg.getCell(0);
 
         HSSFRow critAl = worksheet.getRow(37);
         HSSFCell cellA38 = critAl.getCell(0);
-
+        System.out.println("Deubug here");
         HSSFRow critK = worksheet.getRow(38);
         HSSFCell cellA39 = critK.getCell(0);
 
         HSSFRow critCa = worksheet.getRow(39);
         HSSFCell cellA40 = critCa.getCell(0);
-
+        System.out.println("Deubug here");
         HSSFRow critCr = worksheet.getRow(40);
         HSSFCell cellA41 = critCr.getCell(0);
 
         HSSFRow critMn = worksheet.getRow(41);
         HSSFCell cellA42 = critMn.getCell(0);
-
+        System.out.println("Deubug here");
         HSSFRow critFe = worksheet.getRow(42);
         HSSFCell cellA43 = critFe.getCell(0);
 
         HSSFRow critNi = worksheet.getRow(43);
         HSSFCell cellA44 = critNi.getCell(0);
-
+        System.out.println("Deubug here");
         HSSFRow critCu = worksheet.getRow(44);
         HSSFCell cellA45 = critCu.getCell(0);
-        
+        System.out.println("Deubug here");
         HSSFRow critSn = worksheet.getRow(45);
         HSSFCell cellA46 = critSn.getCell(0);
-        
+        System.out.println("Deubug here");
         HSSFRow critZn = worksheet.getRow(46);
         HSSFCell cellA47 = critZn.getCell(0);
-        
+            System.out.println("DEBUG HERE");
         HSSFRow critTi = worksheet.getRow(47);
         HSSFCell cellA48 = critTi.getCell(0);
         
@@ -2212,6 +2744,7 @@ public class PDFtoExcel extends Application {
             }
 
         }
+        
         FileOutputStream fileOut = new FileOutputStream(templatePath); //saves file
         workbook.write(fileOut);
         fileOut.flush();
@@ -2220,7 +2753,7 @@ public class PDFtoExcel extends Application {
         
 
         ++n;
-
+        updateProgressBar(n);
         // if empty, use default name, else user specified name
         String destinationPath = isEmpty ? material + "_" + nameLot + "_Ions.xls" : outputName + ".xls";
 
@@ -2290,5 +2823,39 @@ public class PDFtoExcel extends Application {
         }));
     }
 
+private static void ocrTest(){
+    File imageFile = new File("/Users/pluebbert/Downloads/Tess4J/ocr_test_file.jpg");
+    File output = new File("/Users/pluebbert/Downloads/Tess4J/ocrTEST.txt");
+            
+        if(imageFile.exists()){
+            System.out.println("Image exsists!");
+            System.out.println(imageFile.getAbsolutePath());
+        }
+        System.out.println("******************** AHHHHHHHHH H********************");
+        System.out.println("RUNNING OCR!!!!!!!!!");
+        System.out.println("");
+        System.out.println("");
+
+        Tesseract tes = new Tesseract();
+        try {
+            tes.setDatapath("/Users/pluebbert/Downloads/Tess4J/tessdata");
+            String text = tes.doOCR(imageFile);
+            System.out.println(text);
+            System.out.println("Now printing ocrOut[]");
+            String[] ocrOut = text.split(" ");
+            System.out.println(ocrOut);
+            try {
+                FileUtils.writeStringToFile(output, text);//Set the file directory to the txt to csv file directory
+               
+                /* Analyte, Mass, Conc, Units, CPS, Conc. RSD, Tune Mode*/
+            } catch (IOException ex) {
+                Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        catch (TesseractException e){
+            e.printStackTrace();
+            }
+    }
     
 }
+

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/10.0.1" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <Label layoutX="14.0" layoutY="19.0" text="File Name:" />
+      <Label layoutX="132.0" layoutY="369.0" text="Made By Patric Luebbert" />
+      <TextField fx:id="pathField" layoutX="96.0" layoutY="14.0" prefHeight="27.0" prefWidth="480.0" promptText="Output File Name" />
+      <ListView fx:id="listViewStrings" layoutX="96.0" layoutY="49.0" prefHeight="211.0" prefWidth="480.0" />
+      <Button fx:id="moveUp" layoutX="17.0" layoutY="280.0" mnemonicParsing="false" prefHeight="27.0" prefWidth="90.0" text="Move Up" />
+      <Button fx:id="moveDown" layoutX="17.0" layoutY="320.0" mnemonicParsing="false" text="Move Down" />
+      <Button fx:id="deleteBtn" layoutX="17.0" layoutY="356.0" mnemonicParsing="false" prefHeight="27.0" prefWidth="90.0" text="Delete" />
+      <Button fx:id="selectBtn" layoutX="242.0" layoutY="267.0" mnemonicParsing="false" prefHeight="27.0" prefWidth="116.0" text="Add PDF's" />
+      <Button fx:id="okBtn" layoutX="531.0" layoutY="267.0" mnemonicParsing="false" text="Run" />
+      <MenuButton fx:id="toolSelect" layoutX="490.0" layoutY="356.0" mnemonicParsing="false" text="Instrument">
+        <items>
+          <MenuItem fx:id="instrument1" mnemonicParsing="false" text="7900" />
+          <MenuItem fx:id="instrument2" mnemonicParsing="false" text="Legacy Tool" />
+        </items>
+      </MenuButton>
+   </children>
+</AnchorPane>

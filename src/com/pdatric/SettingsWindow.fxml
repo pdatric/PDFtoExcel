@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.text.TextFlow?>
+
+
+<AnchorPane fx:id="SettingsAnchorPane" style="-fx-background-color: Grey;" xmlns="http://javafx.com/javafx/10.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.pdatric.SettingsWindowController">
+   <children>
+      <Pane fx:id="SettingsPane" layoutX="29.0" layoutY="27.0">
+         <children>
+            <CheckBox fx:id="NaCheckBox" mnemonicParsing="false" selected="true" text="Na" />
+            <CheckBox fx:id="BeCheckBox" layoutY="26.0" mnemonicParsing="false" selected="true" text="Be" />
+            <CheckBox fx:id="MgCheckBox" layoutY="52.0" mnemonicParsing="false" selected="true" text="Mg" />
+            <CheckBox fx:id="CaCheckBox" layoutY="129.0" mnemonicParsing="false" selected="true" text="Ca" />
+            <CheckBox fx:id="AlCheckBox" layoutY="77.0" mnemonicParsing="false" selected="true" text="Al" />
+            <CheckBox fx:id="KCheckBox" layoutY="102.0" mnemonicParsing="false" selected="true" text="K" />
+            <CheckBox fx:id="TiCheckBox" layoutY="154.0" mnemonicParsing="false" selected="true" text="Ti" />
+            <CheckBox fx:id="CrCheckBox" layoutY="180.0" mnemonicParsing="false" selected="true" text="Cr" />
+            <CheckBox fx:id="MnCheckBox" layoutY="206.0" mnemonicParsing="false" selected="true" text="Mn" />
+            <CheckBox fx:id="NiCheckBox" layoutY="283.0" mnemonicParsing="false" selected="true" text="Ni" />
+            <CheckBox fx:id="FeCheckBox" layoutY="231.0" mnemonicParsing="false" selected="true" text="Fe" />
+            <CheckBox fx:id="CoCheckBox" layoutY="256.0" mnemonicParsing="false" selected="true" text="Co" />
+            <CheckBox fx:id="CuCheckBox" layoutY="309.0" mnemonicParsing="false" selected="true" text="Cu" />
+            <CheckBox fx:id="ZnCheckBox" layoutX="49.0" mnemonicParsing="false" selected="true" text="Zn" />
+            <CheckBox fx:id="GaCheckBox" layoutX="49.0" layoutY="25.0" mnemonicParsing="false" selected="true" text="Ga" />
+            <CheckBox fx:id="ZrCheckBox" layoutX="49.0" layoutY="51.0" mnemonicParsing="false" selected="true" text="Zr" />
+            <CheckBox fx:id="CdCheckBox" layoutX="49.0" layoutY="128.0" mnemonicParsing="false" selected="true" text="Cd" />
+            <CheckBox fx:id="MoCheckBox" layoutX="49.0" layoutY="76.0" mnemonicParsing="false" selected="true" text="Mo" />
+            <CheckBox fx:id="RuCheckBox" layoutX="49.0" layoutY="101.0" mnemonicParsing="false" selected="true" text="Ru" />
+            <CheckBox fx:id="InCheckBox" layoutX="49.0" layoutY="153.0" mnemonicParsing="false" selected="true" text="In" />
+            <CheckBox fx:id="SnCheckBox" layoutX="49.0" layoutY="179.0" mnemonicParsing="false" selected="true" text="Sn" />
+            <CheckBox fx:id="SbCheckBox" layoutX="49.0" layoutY="205.0" mnemonicParsing="false" selected="true" text="Sb" />
+            <CheckBox fx:id="PbCheckBox" layoutX="49.0" layoutY="282.0" mnemonicParsing="false" selected="true" text="Pb" />
+            <CheckBox fx:id="WCheckBox" layoutX="49.0" layoutY="230.0" mnemonicParsing="false" selected="true" text="W" />
+            <CheckBox fx:id="LiCheckBox" layoutX="49.0" layoutY="255.0" mnemonicParsing="false" selected="true" text="Li" />
+         </children>
+      </Pane>
+      <TextFlow fx:id="SettingsIonTextFlow" layoutX="136.0" layoutY="27.0" prefHeight="317.0" prefWidth="178.0" style="-fx-background-color: White;" />
+      <Button fx:id="SettingsSaveBtn" layoutX="197.0" layoutY="354.0" mnemonicParsing="false" text="Save" />
+      <Button fx:id="SettingsCancelBtn" layoutX="263.0" layoutY="354.0" mnemonicParsing="false" text="Cancel" />
+   </children>
+</AnchorPane>

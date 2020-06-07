@@ -26,6 +26,20 @@ public class zeroCorrection {
     
     public static String zeroCorrection(String ion){
         ion = ion.toLowerCase().replace("o", "0"); 
+        if(ion.contains("—")){
+            ion = ion.replace("—", "-");
+            
+        }
+        return ion;
+    }
+    
+    public static String minusCorrection(String ion){
+        if(ion.contains("—")){
+            System.out.println(ion);
+            ion.replace("—", "-");
+            
+        }
+        System.out.println("Returning : " + ion);
         return ion;
     }
     

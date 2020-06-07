@@ -3,7 +3,7 @@ plugins {
 }
 
 group 'com.pdatric'
-version '2.3'
+version '2.0'
 
 apply plugin: 'java'
     compileJava{
@@ -37,8 +37,8 @@ dependencies {
     compile name: "courserajava"
     compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.1'
     compile group: 'org.apache.poi', name: 'poi', version: '3.9'
-    //compile group: 'org.bytedeco.javacpp-presets', name: 'opencv', version: '4.0.1-1.4.4'
-    compile group: 'net.sourceforge.tess4j', name: 'tess4j', version: '4.4.0'
-    //compile group: 'org.ghost4j', name: 'ghost4j', version: '1.0.1'
     
+    compile group: 'net.sourceforge.tess4j', name: 'tess4j', version: '4.1.0'
+    compile group: 'org.ghost4j', name: 'ghost4j', version: '1.0.1'
+    compile group: 'net.sourceforge.lept4j', name: 'lept4j', version: '1.10.0' 
     }

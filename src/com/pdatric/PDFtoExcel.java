@@ -42,12 +42,15 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
@@ -68,7 +71,7 @@ public class PDFtoExcel extends Application {
     private static TextField pathField;
     private static String outputName;
     private static int size;
-    private static ProgressIndicator pb;
+    private static ProgressBar pb = new ProgressBar(0);
     
     private static boolean isEmpty;
 
@@ -84,7 +87,8 @@ public class PDFtoExcel extends Application {
     private static String OStype; 
     private static String userName;
     private static File dir;
-    private static int n = 1;
+    private static int n=1  ;
+    private static int progress;
     
     
     private static String dirPath;
@@ -111,7 +115,7 @@ public class PDFtoExcel extends Application {
     @Override
     
     public void start(Stage stage) {
-       
+      
 
         OStype = System.getProperty("os.name");
             System.out.println("OS Type: " + OStype);
@@ -187,7 +191,7 @@ public class PDFtoExcel extends Application {
 
             //OK button
             System.out.println("OK");
-                   
+                    pb.setProgress(0.0);
                     outputName = pathField.getText();  // if desired output file name exists, use it
 
                     if (pathField.getText().isEmpty()) {  //checks if user inputed a desired output file name
@@ -217,23 +221,17 @@ public class PDFtoExcel extends Application {
                     // Run Excel Template Creator
                     if (selStrings != null) {
                         
-                        
+                try {
+                    size = selStrings.size();
+                    excelTemplate();
+                } catch (IOException ex) {
+                    Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
+                }
                         
                        
-                            Thread t = new Thread(() -> {
-                                try {
-                                    size = selStrings.size();
-                                   
-                                    
-                                    
-                                    excelTemplate();
-                                } catch (IOException ex) {
-                                    Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
-                                }
-                            }, "Thread A");
-                            t.start();
-                        
+                          
                             
+                        
                     }
             
             
@@ -289,7 +287,7 @@ public class PDFtoExcel extends Application {
             Collections.sort(selStrings);
             Collections.sort(shortStrings);//sorts alphabetically for initial view in listview
             
-            n = selStrings.size();
+            
             
             refreshListView();
         });
@@ -384,6 +382,7 @@ public class PDFtoExcel extends Application {
         root.add(moveUp, 0, 3);
         root.add(moveDown, 0, 4);
         
+        root.add(pb,3,4);
         root.add(instrumentCheckBox, 3,3);
         instrumentCheckBox.setSelected(isChecked);
         
@@ -546,7 +545,6 @@ public class PDFtoExcel extends Application {
 
     /**
      * ***************************************************************************
-     * <p>
      * END OF GUI                                  *
      *******************************************************************************/
 
@@ -555,8 +553,25 @@ public class PDFtoExcel extends Application {
     private static String[] alphabet = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "AA","AB","AC","AD","AE", "AF","AG","AH","AI","AJ","AK","AL","AM","AN","AO","AP","AQ","AR","AS","AT","AU","AV","AW","AX","AY","AZ","BA","BB","BC","BD","BE", "BF","BG","BH","BI","BJ","BK","BL","BM","BN","BO","BP","BQ","BR","BS","BT","BU","BV","BW","BX","BY","BZ", "CA","CB","CC","CD","CE", "CF","CG","CH","CI","CJ","CK","CL","CM","CN","CO","CP","CQ","CR","CS","CT","CU","CV","CW","CX","CY","CZ"};
 
     private static void excelTemplate() throws IOException {   //creates my excel template that will be filled with the ICP-MS Ions data
+       
         if(isChecked){
-            convert("/Users/pluebbert/NetBeansProjects/PDFtoExcel/build/OCR_Excel_Template/OCR_Excel_Template.xlsx");
+           
+            Runnable task = new Runnable(){
+                @Override
+                public void run(){
+                    String template = "/Users/pluebbert/NetBeansProjects/PDFtoExcel/build/OCR_Excel_Template/OCR_Excel_Template.xlsx";
+                    try {
+                        convert(template);
+                    } catch (IOException ex) {
+                        Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                   
+            }
+           
+           
+            
+            };
+            new Thread(task).start();
         }
         if(!isChecked){
             tmp = new File(dirPath + System.getProperty("file.separator") +"Template_Ions.xls");
@@ -610,6 +625,7 @@ public class PDFtoExcel extends Application {
                         System.out.println("Populating common fields..... ");
 
                         System.out.println(selectedFileSize);
+                        
                 /* rest of this method creates each row, then creates the first cell 
                    of the column and fills it with the ions template */
                         String[] nameString = {"name", "lot", "stage", "conc", "Be", "Na", "Mg", 
@@ -1090,7 +1106,7 @@ public class PDFtoExcel extends Application {
         for (CSVRecord record : parser) { //Scans CSV
             a = record.get(0); //scans first column of CSV
             if(isChecked){
-                material = sampleNames.get(n-1);
+                material = sampleNames.get(selStrings.size()-1);
                 System.out.println(material);
                 
             }
@@ -1665,6 +1681,7 @@ public class PDFtoExcel extends Application {
             try {
                 FileUtils.copyFile(input, output);
             } catch (IOException ex) {
+                System.out.println(list);
                 Logger.getLogger(PDFtoExcel.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
@@ -1674,8 +1691,8 @@ public class PDFtoExcel extends Application {
          
          
          for(int i = 0; i <= list.size()-1; i++){
-            
-            Double conc = Double.parseDouble(list.get(i).toString());
+            String ion = zeroCorrection.minusCorrection(list.get(i).toString());
+            Double conc = Double.parseDouble(ion.toString());
             
             System.out.println(conc);
             doubleList.add(conc);
@@ -1741,7 +1758,9 @@ public class PDFtoExcel extends Application {
                     
             
            // if empty, use default name, else user specified name
-        String destinationPath = isEmpty ? name + "_" + "Test" + "_Ions.xls" : outputName + ".xls";
+           
+        String destinationPath = isEmpty ? "new_Ions.xls" : outputName + ".xls";
+       
 
         System.out.println("*************Template filled*************");
         System.out.println("Now renaming file for you");
@@ -2782,7 +2801,7 @@ public class PDFtoExcel extends Application {
 
         System.out.println("*************Template filled*************");
         System.out.println("Now renaming file for you");
-
+        System.out.println("n: "+ n+ "   Size: " + size);
         fileOut.close();
         copy(templatePath, destinationPath);
     }
@@ -2795,7 +2814,20 @@ public class PDFtoExcel extends Application {
         System.out.println("Your spreadsheet is located at: " + destinationPath);
         System.out.println("****************COMPLETE****************");
         
-        if(n > size){
+       Runnable pbTask = new Runnable() {
+           @Override
+            public void run(){
+                 Platform.runLater(new Runnable() {
+                    @Override
+                    public void run(){
+                        pb.setProgress(n/size);
+                }
+            });
+         }
+       };
+       pbTask.run();
+        
+        if(n+1 > size){
             
             open(destinationPath);
             
